@@ -4,98 +4,112 @@ Backend de ConstruCloudAI — plataforma de generación de presupuestos de const
 
 ## Stack
 
-- **Runtime:** Python 3.12+
+- **Runtime:** Python 3.14
 - **Framework:** FastAPI
 - **ORM:** SQLAlchemy 2.0 + Alembic (migraciones)
-- **Base de datos:** PostgreSQL 16
+- **Base de datos:** PostgreSQL 17
 - **Autenticación:** JWT (access + refresh tokens)
-- **IA:** Integración con LLM para sugerencia de partidas y estimaciones
-- **Storage:** MinIO (fase posterior al MVP)
+- **IA:** Groq (LLM para sugerencia de partidas)
 - **Containerización:** Docker + Docker Compose
+- **Entorno:** Pipenv + DevContainer
 
 ## Estructura del proyecto
 
 ```
 construcloudai-api/
-├── app/
-│   ├── __init__.py
-│   ├── main.py                 # Entry point FastAPI
-│   ├── config.py               # Settings (Pydantic BaseSettings)
-│   ├── database.py             # Engine, SessionLocal, Base
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── usuario.py
-│   │   ├── cliente.py
-│   │   ├── presupuesto.py
-│   │   ├── detalle.py
-│   │   └── tarifa_base.py
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   ├── usuario.py
-│   │   ├── cliente.py
-│   │   ├── presupuesto.py
-│   │   ├── detalle.py
-│   │   └── tarifa_base.py
-│   ├── routers/
-│   │   ├── __init__.py
-│   │   ├── auth.py
-│   │   ├── usuarios.py
-│   │   ├── clientes.py
-│   │   ├── presupuestos.py
-│   │   ├── detalles.py
-│   │   ├── tarifas.py
-│   │   └── ia.py
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── auth_service.py
-│   │   ├── presupuesto_service.py
-│   │   ├── ia_service.py
-│   │   └── pdf_service.py
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── security.py         # JWT, hashing
-│   │   └── dependencies.py     # get_db, get_current_user
-│   └── utils/
+├── src/
+│   └── app/
 │       ├── __init__.py
-│       └── exceptions.py
+│       ├── app.py                  # Entry point FastAPI
+│       ├── database.py             # Engine, SessionLocal, Base
+│       ├── router_global.py        # Router principal
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── usuario.py
+│       │   ├── cliente.py
+│       │   ├── presupuesto.py
+│       │   ├── capitulo.py
+│       │   ├── detalle.py
+│       │   └── tarifa_base.py
+│       ├── schemas/
+│       │   ├── __init__.py
+│       │   ├── usuario.py
+│       │   ├── cliente.py
+│       │   ├── presupuesto.py
+│       │   ├── capitulo.py
+│       │   ├── detalle.py
+│       │   └── tarifa_base.py
+│       ├── routers/
+│       │   ├── __init__.py
+│       │   ├── auth.py
+│       │   ├── usuarios.py
+│       │   ├── clientes.py
+│       │   ├── presupuestos.py
+│       │   ├── capitulos.py
+│       │   ├── detalles.py
+│       │   ├── tarifas.py
+│       │   └── ia.py
+│       ├── services/
+│       │   ├── __init__.py
+│       │   ├── auth_service.py
+│       │   ├── presupuesto_service.py
+│       │   ├── ia_service.py
+│       │   └── pdf_service.py
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── security.py         # JWT, hashing
+│       │   └── dependencies.py     # get_db, get_current_user
+│       └── utils/
+│           ├── __init__.py
+│           └── exceptions.py
 ├── alembic/
 │   ├── env.py
 │   └── versions/
-├── tests/
-│   └── __init__.py
+├── .devcontainer/
+│   ├── devcontainer.json
+│   ├── dockerfile
+│   └── docker-compose.yml
 ├── alembic.ini
-├── requirements.txt
+├── Pipfile
+├── Pipfile.lock
 ├── Dockerfile
-├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
 └── README.md
+```
+
+## Scripts (Pipfile)
+
+```bash
+pipenv run start          # Arranca el servidor de desarrollo
+pipenv run migrate        # Genera migración autogenerada
+pipenv run upgrade        # Aplica migraciones pendientes
+pipenv run downgrade      # Revierte última migración
 ```
 
 ## Setup local
 
 ```bash
 # Clonar
-git clone git@github.com:tu-usuario/construcloudai-api.git
-cd construcloudai-api
+git clone git@github.com:MBello21/ConstruCloudAI-API.git
+cd ConstruCloudAI-API
 
-# Entorno virtual
-python -m venv venv
-source venv/bin/activate
+# Abrir en DevContainer (VS Code)
+# O setup manual:
 
 # Dependencias
-pip install -r requirements.txt
+pipenv install
 
 # Variables de entorno
 cp .env.example .env
 # Editar .env con tus credenciales
 
 # Base de datos
-docker compose up -d db
-alembic upgrade head
+docker compose -f .devcontainer/docker-compose.yml up -d db
+pipenv run upgrade
 
 # Servidor de desarrollo
-uvicorn app.main:app --reload --port 8000
+pipenv run start
 ```
 
 ## Deploy

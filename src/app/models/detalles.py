@@ -19,14 +19,14 @@ class Detalles(Base):
         'Capitulos', back_populates='detalles')
     numero: Mapped[int] = mapped_column(Integer)
     descripcion: Mapped[str] = mapped_column(Text)
-    unidad: Mapped[str] = mapped_column(String(20), nulleable=False)
-    cantidad: Mapped[int] = mapped_column(Numeric, nulleable=False, default=0)
+    unidad: Mapped[str] = mapped_column(String(20), nullable=False)
+    cantidad: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
     precio_unitario: Mapped[int] = mapped_column(
-        Numeric, nulleable=False, default=0)
-    subtotal: Mapped[int] = mapped_column(Numeric, nulleable=False, default=0)
-    generado_por_ia: Mapped[bool] = mapped_column(Boolean, nulleable=False)
-    precio_confirmado: Mapped[bool] = mapped_column(Boolean, nulleable=False)
-    es_externo: Mapped[bool] = mapped_column(Boolean, nulleable=False)
+        Numeric, nullable=False, default=0)
+    subtotal: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
+    generado_por_ia: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    precio_confirmado: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    es_externo: Mapped[bool] = mapped_column(Boolean, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

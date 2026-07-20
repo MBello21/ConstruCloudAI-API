@@ -21,15 +21,15 @@ class Presupuestos(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     codigo: Mapped[str] = mapped_column(String(50), unique=True)
-    titulo: Mapped[str] = mapped_column(String(300), nulleable=False)
+    titulo: Mapped[str] = mapped_column(String(300), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text)
     estado: Mapped[EstadoPresupuesto] = mapped_column(
         SQLEnum(EstadoPresupuesto),
         default=EstadoPresupuesto.BORRADOR
     )
-    subtotal: Mapped[int] = mapped_column(Numeric, nulleable=False, default=0)
-    iva: Mapped[int] = mapped_column(Numeric, nulleable=False, default=21.00)
-    total: Mapped[int] = mapped_column(Numeric, nulleable=False, default=0)
+    subtotal: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
+    iva: Mapped[int] = mapped_column(Numeric, nullable=False, default=21.00)
+    total: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
     condiciones_pago: Mapped[str] = mapped_column(Text)
     validez_dias: Mapped[int] = mapped_column(Integer, default=30)
 

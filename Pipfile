@@ -22,6 +22,8 @@ email-validator = "*"
 dotenv = "*"
 bcrypt = "==4.0.1"
 alembic = "*"
+groq = "*"
+pgvector = "*"
 
 [dev-packages]
 

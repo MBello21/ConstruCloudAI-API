@@ -1,12 +1,13 @@
 from typing import TYPE_CHECKING
 from datetime import datetime
-from sqlalchemy import func, String, Boolean, Text, Numeric, Integer, DateTime, Enum as SQLEnum
+from sqlalchemy import func, String, Text, Numeric, Integer, DateTime, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 import enum
 
 if TYPE_CHECKING:
     from .capitulos import Capitulos
+    from .presupuesto_embedding import PresupuestoEmbedding
 
 
 class EstadoPresupuesto(str, enum.Enum):
@@ -35,6 +36,13 @@ class Presupuestos(Base):
 
     contexto_rag: Mapped[str] = mapped_column(Text, nullable=True)
 
+    embedding: Mapped["PresupuestoEmbedding"] = relationship(
+        "PresupuestoEmbedding",
+        back_populates="presupuesto",
+        cascade="all, delete-orphan",
+        uselist=False
+    )
+
     capitulos: Mapped[list["Capitulos"]] = relationship(
         "Capitulo",
         back_populates="presupuesto",
@@ -56,7 +64,5 @@ class Presupuestos(Base):
         onupdate=func.now()
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now())
+    def __repr__(self):
+        return f"<Presupuestos(id={self.id}, codigo={self.codigo})>"

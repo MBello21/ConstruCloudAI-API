@@ -42,18 +42,11 @@ class Presupuestos(Base):
         cascade="all, delete-orphan",
         uselist=False
     )
-
     capitulos: Mapped[list["Capitulos"]] = relationship(
-        "Capitulo",
+        "Capitulos",
         back_populates="presupuesto",
         cascade="all, delete-orphan"
     )
-    chat_historial: Mapped[list["ChatHistorial"]] = relationship(
-        "ChatHistorial",
-        back_populates="presupuesto",
-        cascade="all, delete-orphan"
-    )
-
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now()

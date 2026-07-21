@@ -1,5 +1,5 @@
-import requests
 import os
+import requests
 from typing import List
 from dotenv import load_dotenv
 
@@ -10,7 +10,10 @@ class EmbeddingService:
 
     def __init__(self):
         self.hf_token = os.getenv("HUGGINGFACE_TOKEN", None)
-        self.model_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        self.model_url = (
+            "https://router.huggingface.co/hf-inference/models/"
+            "sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
+        )
         self.headers = {}
         if self.hf_token:
             self.headers["Authorization"] = f"Bearer {self.hf_token}"

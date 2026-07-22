@@ -6,29 +6,68 @@ SOLICITUD DEL CLIENTE:
 Título: {titulo}
 Descripción: {descripcion}
 
+MODALIDAD DE TRABAJO: {modalidad_trabajo}
+
 {contexto_texto}
 
 ═══════════════════════════════════════════════════════════════════════════════════
 🔴 REGLAS RIGUROSAS DE NEGOCIO - LECTURA OBLIGATORIA - INCUMPLIMIENTO = RECALCULAR
 ═══════════════════════════════════════════════════════════════════════════════════
 
+0️⃣ MODALIDAD DE TRABAJO - AJUSTE DE PRECIOS SEGÚN TIPO:
+   La modalidad ACTUAL es: {modalidad_trabajo}
+
+   MODALIDAD "OBRA COMPLETA" (Default):
+   - La empresa aporta TODOS los materiales (azulejos, sanitarios, grifería, encimeras, etc.)
+   - La empresa cobra MATERIAL + MANO DE OBRA
+   - Precios ESTÁNDAR completos (ej. alicatado 35-55€/m², sanitarios 550-800€)
+
+   MODALIDAD "SOLO MANO DE OBRA / MATERIALES POR CLIENTE":
+   - El cliente aporta y suministra TODOS los materiales (azulejos, sanitarios, grifería, encimeras, etc.)
+   - La empresa cobra SOLO:
+     * Mano de obra de colocación/instalación
+     * Materiales auxiliares de agarre (cemento cola C2, borada, crucetas, silicona, manguetón, etc.)
+   - Precios REDUCIDOS para "Solo Colocación" (ej. alicatado 18-24€/m², sanitarios 70-120€/ud)
+
+   Si es "SOLO MANO DE OBRA", redacta SIEMPRE el concepto explícitamente como:
+   "Colocación de [elemento] aportado por la propiedad. Incluye mano de obra + materiales auxiliares"
+
+   ESCALA DE PRECIOS POR MODALIDAD:
+
+   MODALIDAD "OBRA COMPLETA":
+   - Alicatado/Solado: 30-50€/m² (material + colocación)
+   - Sanitarios (suministro + instalación): 550-800€
+   - Plato ducha (suministro + instalación): 350-500€
+   - Mampara (suministro + instalación): 300-600€
+   - Encimera (suministro + instalación): 150-400€
+
+   MODALIDAD "SOLO MANO DE OBRA":
+   - Alicatado/Solado (SOLO colocación): 18-24€/m²
+   - Sanitarios (SOLO instalación): 70-120€/ud
+   - Plato ducha (SOLO instalación): 100-180€/ud
+   - Mampara (SOLO instalación): 120-200€/ud
+   - Encimera (SOLO montaje): 120-200€/ud
+   - Rodapié (SOLO colocación): 5-8€/ml
+
 1️⃣ PROHIBICIÓN ABSOLUTA: PARTIDAS MIXTAS "SUELO Y PARED" (CRÍTICO)
    ❌ PROHIBIDO AGRUPAR en una partida: "Alicatado suelo y pared" o "Solado y alicatado"
    ✅ OBLIGATORIO SEPARAR SIEMPRE en partidas independientes:
 
    PARTIDA 1: Solado (suelo)
-   - Concepto: "Solado cerámica suelo baño 6m²"
+   - Concepto: "Solado cerámica suelo baño 6m²" (si "Obra Completa")
+             o "Colocación de solado aportado por la propiedad 6m²" (si "Solo Mano de Obra")
    - Unidad: m2
    - Cantidad: 6
-   - Precio unitario: 35€/m² (material + instalación)
-   - Subtotal: 6 × 35 = 210.00€
+   - Precio unitario: 40€/m² (Obra Completa) o 20€/m² (Solo Mano de Obra)
+   - Subtotal: 6 × 40 = 240€ (Obra Completa) o 6 × 20 = 120€ (Solo Mano de Obra)
 
    PARTIDA 2: Alicatado (paredes)
-   - Concepto: "Alicatado azulejo paredes baño 20m²"
+   - Concepto: "Alicatado azulejo blanco paredes baño 24m²" (si "Obra Completa")
+             o "Colocación de alicatado aportado por la propiedad 24m²" (si "Solo Mano de Obra")
    - Unidad: m2
-   - Cantidad: 20  (paredes, NO 6m² del suelo)
-   - Precio unitario: 40€/m² (material + instalación)
-   - Subtotal: 20 × 40 = 800.00€
+   - Cantidad: 24  (paredes, NO 6m² del suelo)
+   - Precio unitario: 45€/m² (Obra Completa) o 22€/m² (Solo Mano de Obra)
+   - Subtotal: 24 × 45 = 1080€ (Obra Completa) o 24 × 22 = 528€ (Solo Mano de Obra)
 
    ❌ ERROR TÍPICO (QUE NO DEBES HACER):
    - "Alicatado suelo y paredes baño": 10m² × 50€ = 500€ ← FALSO, incompleto, confuso

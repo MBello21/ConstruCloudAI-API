@@ -119,10 +119,16 @@ async def crear_presupuesto(
     solicitud: SolicitudIAPresupuesto, db: Session = Depends(get_db)
 ):
   try:
+    # Determinar modalidad de trabajo
+    modalidad_trabajo = "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE" if solicitud.materiales_por_cliente else "OBRA COMPLETA"
+
     # 2. Generar la estructura con Groq y RAG
     rag_service = PresupuestoRAGService(db=db)
     resultado_rag = rag_service.generar_presupuesto_con_rag(
-        descripcion=solicitud.descripcion, titulo=solicitud.titulo
+        descripcion=solicitud.descripcion,
+        titulo=solicitud.titulo,
+        modalidad_trabajo=modalidad_trabajo,
+        materiales_por_cliente=solicitud.materiales_por_cliente
     )
 
     datos = resultado_rag["presupuesto_estructurado"]

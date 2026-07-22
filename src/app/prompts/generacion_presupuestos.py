@@ -8,36 +8,55 @@ Descripción: {descripcion}
 
 {contexto_texto}
 
-═══════════════════════════════════════════════════════════════════════
-🔴 REGLAS RIGUROSAS - LECTURA OBLIGATORIA - INCUMPLIMIENTO = RECALCULAR
-═══════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════════
+🔴 REGLAS RIGUROSAS DE NEGOCIO - LECTURA OBLIGATORIA - INCUMPLIMIENTO = RECALCULAR
+═══════════════════════════════════════════════════════════════════════════════════
 
-1️⃣ CÁLCULO ARITMÉTICO OBLIGATORIO (CRÍTICO):
-   Cada detalle DEBE cumplir: subtotal = cantidad × precio_unitario (2 decimales exactos)
-   Ejemplo CORRECTO: 94m² × 2.50€/m² = 235.00€ (NO 234.99€, NO 235.50€)
+1️⃣ PROHIBICIÓN ABSOLUTA: PARTIDAS MIXTAS "SUELO Y PARED" (CRÍTICO)
+   ❌ PROHIBIDO AGRUPAR en una partida: "Alicatado suelo y pared" o "Solado y alicatado"
+   ✅ OBLIGATORIO SEPARAR SIEMPRE en partidas independientes:
 
-   Cada capítulo: subtotal = SUMA EXACTA de todos sus detalles
-   Presupuesto: subtotal = SUMA EXACTA de todos los capítulos
-   Total: subtotal × 1.21 (IVA 21% españa, EXACTO)
+   PARTIDA 1: Solado (suelo)
+   - Concepto: "Solado cerámica suelo baño 6m²"
+   - Unidad: m2
+   - Cantidad: 6
+   - Precio unitario: 35€/m² (material + instalación)
+   - Subtotal: 6 × 35 = 210.00€
 
-   ⚠️ SI UN SUBTOTAL, CAPÍTULO O TOTAL SUMA 0€ SIN RAZÓN = ERROR = RECALCULA TODO
+   PARTIDA 2: Alicatado (paredes)
+   - Concepto: "Alicatado azulejo paredes baño 20m²"
+   - Unidad: m2
+   - Cantidad: 20  (paredes, NO 6m² del suelo)
+   - Precio unitario: 40€/m² (material + instalación)
+   - Subtotal: 20 × 40 = 800.00€
 
-2️⃣ CÁLCULO DE SUPERFICIES EN CONSTRUCCIÓN (NO CONFUNDIR):
-   Para paramentos VERTICALES (pintura, alicatado, rascado, eliminar gotelé):
-   - Superficie paredes = Perímetro × Altura (2.4-2.6m típico)
-   - NUNCA asignes m² de SUELO como m² de PAREDES
+   ❌ ERROR TÍPICO (QUE NO DEBES HACER):
+   - "Alicatado suelo y paredes baño": 10m² × 50€ = 500€ ← FALSO, incompleto, confuso
 
-   Ejemplo CORRECTO para piso 80m² (asumiendo ~8×10m):
-   - Perímetro: (8+10+8+10) = 36m lineales
-   - Alto paredes: 2.5m
-   - Superficie paredes = 36ml × 2.5m = 90m² PAREDES
-   - Superficie techos = 80m² TECHOS (= m² suelo)
-   - Total a pintar = 90 + 80 = 170m² (NUNCA 80m²)
+2️⃣ REGLA GEOMÉTRICA OBLIGATORIA: CÁLCULO DE PAREDES (BAÑOS/COCINAS/VIVIENDAS)
+   Para NUNCA confundir superficies:
 
-   Ejemplo INCORRECTO (QUE NO DEBES HACER):
-   - ❌ 80m² suelo → 80m² paredes (FALSO)
-   - ❌ 6m² baño → 6m² paredes (FALSO, un baño 2×3m suelo = 10m desarrollo)
-   - ❌ 100m² suelo → 100m² paredes (FALSO, mínimo 120-150m²)
+   BAÑOS O COCINAS (ejemplo: baño 6m² = 2m × 3m):
+   - Superficie suelo: 6m² (lo que se pisa)
+   - Perímetro: 2+3+2+3 = 10m lineales
+   - Altura típica paredes: 2.4m
+   - Superficie paredes: 10ml × 2.4m = 24m² (NO 6m², ≠ 4x factor)
+   - Superficie techos: 6m²
+
+   VIVIENDAS COMPLETAS (pintura):
+   - Superficie suelo total: N m²
+   - Superficie paredes + techos: ≈ N × 3.2 (aprox.)
+   - Ejemplo: piso 80m² suelo → ~256m² de pintura (paredes + techos)
+
+   ❌ NUNCA:
+   - Baño 6m² suelo → 6m² paredes (FALSO)
+   - Cocina 8m² suelo → 8m² paredes (FALSO)
+   - Piso 80m² suelo → 80m² pintura (FALSO, es 256m²)
+
+   ✅ SIEMPRE:
+   - Calcular perímetro × altura para paredes
+   - Paredes + Techos ≈ Suelo × 3.2 en viviendas
+   - Verificar: Paredes >> Suelo (mínimo 2-4x en baños/cocinas)
 
 3️⃣ TABLA DE PRECIOS UNITARIOS MÁXIMOS ESPAÑA (MERCADO REAL):
    PREPARACIÓN/DEMOLICIÓN:
@@ -52,103 +71,221 @@ Descripción: {descripcion}
    - Pintura plástica 2 manos: 6-9€/m² (MÁXIMO 9€)
    - Pintura exterior: 8-12€/m² (MÁXIMO 12€)
 
+   SOLADOS/ALICATADOS:
+   - Solados (material + instalación): 30-50€/m² (MÁXIMO 50€)
+   - Alicatados (material + instalación): 35-55€/m² (MÁXIMO 55€)
+   - Rodapié (instalación): 8-15€/ml (MÁXIMO 15€, NO 3.000€/ml)
+
    OTROS:
    - Solera hormigón: 25-40€/m² (MÁXIMO 40€)
    - Tabiquería Pladur: 30-45€/m² (MÁXIMO 45€)
    - Fontanería: 25-45€/ml (MÁXIMO 45€)
-   - Solados/alicatados: 30-50€/m² (MÁXIMO 50€)
-   - Rodapié (instalación): 8-15€/ml (NO 3.000€/ml)
 
-   ❌ SI UN PRECIO UNITARIO EXCEDE ESTOS MÁXIMOS = REVISOR DETECTARÁ INCONSISTENCIA
+   ❌ SI UN PRECIO UNITARIO EXCEDE ESTOS MÁXIMOS = REVISIÓN FALLIDA
 
-4️⃣ ESTRUCTURA DETALLADA Y SEPARADA:
-   - Raspado gotelé: PARTIDA ÚNICA (solo si existe gotelé)
-   - Lijado: PARTIDAS SEPARADAS (lijado post-gotelé vs. lijado normal)
-   - Imprimación: PARTIDAS SEPARADAS (blanca vs. gris, etc.)
-   - Pintura: PARTIDAS SEPARADAS POR MANO Y COLOR
-   - Acabados diferentes: PARTIDAS SEPARADAS
-   NO AGRUPES trabajos diferentes en una partida.
+4️⃣ CONCEPTO "SUMINISTRO E INSTALACIÓN" (OBLIGATORIO EN ELEMENTOS):
+   Para sanitarios, mamparas, platos de ducha, muebles, encimeras:
 
-5️⃣ UNIDADES ESTÁNDAR DE CONSTRUCCIÓN:
-   Utilizar SIEMPRE: m2 (superficie), m3 (volumen), m (metro lineal), ud (unidad), h (horas)
-   ❌ NO USAR: "metro lineal", "longitud", "piezas", textos largos
+   ✅ FORMATO OBLIGATORIO del concepto:
+   "Suministro e instalación de [material específico]"
 
-CÁLCULO DETALLADO - EJEMPLOS:
+   Ejemplos CORRECTOS:
+   - "Suministro e instalación de plato de ducha 80×80cm" (cantidad: 1 ud, precio: 400€)
+   - "Suministro e instalación de inodoro cerámica con cisterna" (cantidad: 1 ud, precio: 600€)
+   - "Suministro e instalación de lavamanos con grifo monomando" (cantidad: 1 ud, precio: 250€)
+   - "Suministro e instalación de mampara frontal vidrio templado 140cm" (cantidad: 1 ud, precio: 350€)
+   - "Suministro e instalación de encimera laminado 2m" (cantidad: 1 ud, precio: 180€)
 
-EJEMPLO 1 - Pintura 94m² a 2.50€/m²:
-  cantidad=94, precio_unitario=2.50, subtotal=94×2.50=235.00€ ✓
+   ❌ FORMATO INCORRECTO:
+   - "Plato de ducha" (sin "Suministro e instalación")
+   - "Mano de obra instalación sanitarios" (isolada, sin material)
+   - "Inodoro" (ambiguo, sin detallar componentes)
 
-EJEMPLO 2 - Presupuesto piso 80m² con pintura completa (3 capas):
-  Cap 1: Preparación
-    - Raspar gotelé 40m² × 12€ = 480.00€
-    - Lijar 94m² × 3€ = 282.00€
-    Subtotal cap 1 = 480 + 282 = 762.00€
+   PRECIOS REALISTAS ESPAÑA:
+   - Plato de ducha + instalación: 350-500€ (NO 50€)
+   - Sanitarios básicos + instalación: 550-800€
+   - Mampara + instalación: 300-600€
+   - Encimeras cocina + instalación: 150-400€ (según material)
 
-  Cap 2: Pintura
-    - Imprimación 94m² × 2.50€ = 235.00€
-    - Pintura mano 1: 94m² × 4€ = 376.00€
-    - Pintura mano 2: 94m² × 4€ = 376.00€
-    Subtotal cap 2 = 235 + 376 + 376 = 987.00€
+5️⃣ CÁLCULO ARITMÉTICO OBLIGATORIO (2 DECIMALES EXACTOS):
+   Cada detalle: subtotal = cantidad × precio_unitario (exacto)
+   Cada capítulo: subtotal = SUMA EXACTA de detalles
+   Presupuesto: subtotal = SUMA EXACTA de capítulos
+   Total: subtotal × 1.21 (IVA 21%, exacto)
 
-  Subtotal presupuesto = 762 + 987 = 1.749.00€
-  Total (IVA 21%) = 1.749.00 × 1.21 = 2.116.29€ ✓
+   ⚠️ NUNCA subtotales o totales a 0€ sin razón
 
-VERIFICACIÓN MATEMÁTICA OBLIGATORIA (NO PUEDES OMITIR):
-Antes de generar JSON, DEBES verificar MANUALMENTE:
+6️⃣ UNIDADES ESTÁNDAR:
+   - m2: metros cuadrados (superficies)
+   - m3: metros cúbicos (volúmenes)
+   - m: metros lineales (perfiles, tuberías)
+   - ud: unidades (piezas individuales)
+   ❌ NO USAR: "metro lineal", "piezas", "h", "longitud"
 
-  1. Cada detalle: cantidad × precio_unitario = subtotal (exacto a 2 decimales)
-  2. Cada capítulo: suma de detalles = subtotal capítulo
-  3. Presupuesto: suma de capítulos = subtotal presupuesto
-  4. Total: subtotal × 1.21 = total (2 decimales)
-  5. Ningún subtotal es 0€ (salvo que no haya partidas, lo que es error)
-  6. Superficies de paredes ≠ superficies de suelo
-  7. Precios unitarios están dentro de máximos
+EJEMPLO COMPLETO - BAÑO 6m² CON ALICATADO:
 
-SI ALGUNA VERIFICACIÓN FALLA → RECALCULA TODO. NO GENERES JSON CON DATOS INCORRECTOS.
+ENTRADA: "Baño reforma 6m² (suelo), azulejo blanco. Inodoro y lavamanos nuevos."
+
+CÁLCULOS EXPLÍCITOS:
+- Baño suelo: 2m × 3m = 6m²
+- Perímetro: 10m lineales
+- Altura paredes: 2.4m
+- Paredes: 10m × 2.4m = 24m² (NO 6m²)
+- Techos: 6m²
+
+CAPÍTULO 1: SOLADOS Y REVESTIMIENTOS
+  Detalle 1: Solado cerámica suelo baño 6m²
+    - Concepto: "Solado cerámica suelo baño 6m²"
+    - Unidad: m2
+    - Cantidad: 6
+    - Precio: 40€/m² (material + instalación)
+    - Subtotal: 6 × 40 = 240.00€
+
+  Detalle 2: Alicatado azulejo paredes baño 24m²
+    - Concepto: "Alicatado azulejo blanco paredes baño 24m²"
+    - Unidad: m2
+    - Cantidad: 24 (NO 6m² del suelo)
+    - Precio: 45€/m² (material + instalación)
+    - Subtotal: 24 × 45 = 1080.00€
+
+  Detalle 3: Rodapié azulejo 10m
+    - Concepto: "Rodapié azulejo coincidente"
+    - Unidad: m
+    - Cantidad: 10
+    - Precio: 12€/m
+    - Subtotal: 10 × 12 = 120.00€
+
+  Subtotal capítulo: 240 + 1080 + 120 = 1440.00€
+
+CAPÍTULO 2: SANITARIOS
+  Detalle 1: Suministro e instalación de inodoro cerámica
+    - Concepto: "Suministro e instalación de inodoro cerámica con cisterna"
+    - Unidad: ud
+    - Cantidad: 1
+    - Precio: 650€ (material + mano obra + conexión)
+    - Subtotal: 1 × 650 = 650.00€
+
+  Detalle 2: Suministro e instalación de lavamanos
+    - Concepto: "Suministro e instalación de lavamanos con grifo monomando"
+    - Unidad: ud
+    - Cantidad: 1
+    - Precio: 300€ (material + mano obra + conexión)
+    - Subtotal: 1 × 300 = 300.00€
+
+  Subtotal capítulo: 650 + 300 = 950.00€
+
+SUBTOTAL PRESUPUESTO: 1440 + 950 = 2390.00€
+TOTAL (IVA 21%): 2390.00 × 1.21 = 2891.90€
+
+VERIFICACIÓN OBLIGATORIA:
+✓ Solado 6m² (suelo) separado de Alicatado 24m² (paredes)
+✓ Paredes (24m²) ≠ Suelo (6m²) → 4x factor correcto para baño
+✓ Cada detalle: cantidad × precio = subtotal exacto
+✓ Capítulo 1: 240 + 1080 + 120 = 1440€ ✓
+✓ Capítulo 2: 650 + 300 = 950€ ✓
+✓ Subtotal: 1440 + 950 = 2390€ ✓
+✓ Total: 2390 × 1.21 = 2891.90€ ✓
+✓ Conceptos de sanitarios incluyen "Suministro e instalación"
+✓ Precios dentro de máximos españoles
+✓ Ningún subtotal es 0€
 
 RESPUESTA EN JSON VÁLIDO - ESTRUCTURA EXACTA:
+(CON VALORES REALES, NO 0.0)
 
 {{
   "titulo": "{titulo}",
-  "descripcion": "Descripción técnica detallada. Incluye mediciones explícitas y metodología.",
-  "subtotal": 0.0,
+  "descripcion": "Descripción técnica con mediciones explícitas. Separación de solados y alicatados.",
+  "subtotal": 2390.00,
   "iva": 21.0,
-  "total": 0.0,
+  "total": 2891.90,
   "condiciones_pago": "25% depósito, 50% certificaciones, 20% fin de obra, 5% retención",
   "validez_dias": 30,
   "capitulos": [
     {{
       "numero": 1,
-      "nombre": "NOMBRE DEL CAPÍTULO",
-      "titulo": "NOMBRE DEL CAPÍTULO",
-      "subtotal": 0.0,
+      "nombre": "SOLADOS Y REVESTIMIENTOS",
+      "titulo": "SOLADOS Y REVESTIMIENTOS",
+      "subtotal": 1440.00,
       "detalles": [
         {{
           "numero": 1,
-          "concepto": "Descripción técnica de partida",
-          "descripcion": "Descripción técnica de partida",
+          "concepto": "Solado cerámica suelo baño 6m²",
+          "descripcion": "Solado cerámica suelo baño 6m² (2m × 3m). Incluye material y adhesivo/mortero + mano de obra + nivelación.",
           "unidad": "m2",
-          "cantidad": 0.0,
-          "precio_unitario": 0.0,
-          "subtotal": 0.0,
-          "importe": 0.0
+          "cantidad": 6.0,
+          "precio_unitario": 40.0,
+          "subtotal": 240.00,
+          "importe": 240.00
+        }},
+        {{
+          "numero": 2,
+          "concepto": "Alicatado azulejo blanco paredes baño 24m²",
+          "descripcion": "Alicatado azulejo blanco 20×20cm paredes baño (perímetro 10m × altura 2.4m = 24m²). Incluye material, adhesivo y mano de obra.",
+          "unidad": "m2",
+          "cantidad": 24.0,
+          "precio_unitario": 45.0,
+          "subtotal": 1080.00,
+          "importe": 1080.00
+        }},
+        {{
+          "numero": 3,
+          "concepto": "Rodapié azulejo coincidente",
+          "descripcion": "Rodapié azulejo 10m coincidente con alicatado. Material + instalación.",
+          "unidad": "m",
+          "cantidad": 10.0,
+          "precio_unitario": 12.0,
+          "subtotal": 120.00,
+          "importe": 120.00
+        }}
+      ]
+    }},
+    {{
+      "numero": 2,
+      "nombre": "SANITARIOS",
+      "titulo": "SANITARIOS",
+      "subtotal": 950.00,
+      "detalles": [
+        {{
+          "numero": 1,
+          "concepto": "Suministro e instalación de inodoro cerámica con cisterna",
+          "descripcion": "Suministro e instalación completa de inodoro cerámica con cisterna de doble descarga. Incluye conexión hidráulica y desagüe.",
+          "unidad": "ud",
+          "cantidad": 1.0,
+          "precio_unitario": 650.0,
+          "subtotal": 650.00,
+          "importe": 650.00
+        }},
+        {{
+          "numero": 2,
+          "concepto": "Suministro e instalación de lavamanos con grifo monomando",
+          "descripcion": "Suministro e instalación de lavamanos cerámica 60cm con grifo monomando cromado. Incluye conexión agua fría/caliente y desagüe.",
+          "unidad": "ud",
+          "cantidad": 1.0,
+          "precio_unitario": 300.0,
+          "subtotal": 300.00,
+          "importe": 300.00
         }}
       ]
     }}
   ]
 }}
 
-═══════════════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════════
 FINAL CHECKPOINT - OBLIGATORIO ANTES DE RESPONDER:
-═══════════════════════════════════════════════════════════════════════
-✓ Detalle: cantidad × precio = subtotal (exacto)
-✓ Capítulo: suma detalles = subtotal (exacto)
-✓ Presupuesto: suma capítulos = subtotal (exacto)
-✓ Total = subtotal × 1.21 (exacto)
-✓ Superficies paredes ≠ superficies suelo
-✓ Precios dentro de máximos españoles
-✓ Unidades son: m2, m3, m, ud, h
-✓ Ningún valor es 0€ sin razón
+═══════════════════════════════════════════════════════════════════════════════════
+✓ NO hay partidas mixtas "suelo y pared" agrupadas
+✓ Solados (suelo) y Alicatados (paredes) en partidas SEPARADAS
+✓ Paredes ≠ Suelo (verificar: paredes >> suelo en factor 2-4x)
+✓ Baño/cocina: Perímetro × Altura para paredes, NO igual a suelo
+✓ Viviendas: Pintura total ≈ Suelo × 3.2
+✓ Conceptos de elementos: "Suministro e instalación de..."
+✓ Precios realistas españoles (no inverosímiles)
+✓ Cada detalle: cantidad × precio = subtotal (exacto 2 decimales)
+✓ Capítulo: suma exacta de detalles
+✓ Presupuesto: suma exacta de capítulos
+✓ Total: subtotal × 1.21 (exacto)
+✓ JSON con valores REALES, NO 0.0
+✓ Unidades estándar: m2, m3, m, ud
 
-SI ALGO FALLA: NO COPIES EL ERROR. RECALCULA.
+SI ALGO FALLA: RECALCULA TODO. NO GENERES JSON INCORRECTO.
 """

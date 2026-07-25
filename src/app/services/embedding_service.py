@@ -25,7 +25,7 @@ class EmbeddingService:
                 self.model_url,
                 headers=self.headers,
                 json={"inputs": texto},
-                timeout=10
+                timeout=30
             )
 
             if response.status_code == 200:

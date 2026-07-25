@@ -28,6 +28,7 @@ class CapituloPresupuestoResponse(BaseModel):
 
 class PresupuestoCompletoResponse(BaseModel):
     id: int
+    codigo:str
     titulo: str
     descripcion: Optional[str] = None
     estado: str

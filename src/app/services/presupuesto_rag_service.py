@@ -23,9 +23,13 @@ class PresupuestoRAGService:
         self,
         descripcion: str,
         titulo: str = "Presupuesto",
+        modalidad_trabajo: str = "OBRA COMPLETA",
+        materiales_por_cliente: bool = False,
         max_contexto: int = 3,
     ) -> dict:
         print(f"\n🚀 Generando presupuesto con RAG para: '{descripcion}'")
+        print(f"📋 Modalidad: {modalidad_trabajo}")
+        print(f"🔧 Materiales por cliente: {materiales_por_cliente}")
 
         # 1. RETRIEVE: Buscar presupuestos similares vía pgvector
         presupuestos_similares = []
@@ -100,6 +104,7 @@ class PresupuestoRAGService:
         prompt = PROMPT_GENERAR_PRESUPUESTO.format(
             titulo=titulo,
             descripcion=descripcion,
+            modalidad_trabajo=modalidad_trabajo,
             contexto_texto=contexto_texto
         )
 

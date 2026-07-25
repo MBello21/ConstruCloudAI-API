@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import uuid
 
 from ..database import get_db
@@ -21,25 +21,128 @@ router = APIRouter()
 embedding_service = EmbeddingService()
 
 
+def to_decimal(val, default=0.0):
+    """Convierte un valor a Decimal de forma segura."""
+    try:
+        return Decimal(str(val if val is not None else default))
+    except Exception:
+        return Decimal(str(default))
+
+
+def redondear_decimal(val, decimales=2):
+    """Redondea un Decimal a N decimales (half-up)."""
+    if val is None:
+        return Decimal("0.00")
+    d = Decimal(str(val))
+    return d.quantize(Decimal(10) ** -decimales, rounding=ROUND_HALF_UP)
+
+
+def validar_y_recalcular_presupuesto(datos):
+    """
+    Valida y recalcula todos los totales en un presupuesto estructurado.
+    Asegura coherencia aritmética total.
+
+    Cambios realizados:
+    1. Recalcula subtotal de cada detalle: cantidad × precio_unitario
+    2. Recalcula subtotal de capítulo: suma de detalles
+    3. Recalcula subtotal presupuesto: suma de capítulos
+    4. Recalcula total: subtotal × 1.21 (IVA 21%)
+
+    Lanza excepción si hay inconsistencias graves.
+    """
+    IVA = Decimal("1.21")
+
+    # Procesar capítulos
+    for cap_data in datos.get("capitulos", []):
+        subtotal_cap = Decimal("0.00")
+
+        # Procesar detalles de cada capítulo
+        for det_data in cap_data.get("detalles", []):
+            cantidad = redondear_decimal(to_decimal(det_data.get("cantidad", 0)))
+            precio_unitario = redondear_decimal(to_decimal(det_data.get("precio_unitario", 0)))
+
+            # RECALCULAR subtotal: cantidad × precio_unitario
+            subtotal_detalle = (cantidad * precio_unitario).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+            det_data["cantidad"] = float(cantidad)
+            det_data["precio_unitario"] = float(precio_unitario)
+            det_data["subtotal"] = float(subtotal_detalle)
+            det_data["importe"] = float(subtotal_detalle)  # importe = subtotal
+
+            subtotal_cap += subtotal_detalle
+
+            # Validación: si cantidad > 0 pero subtotal es 0, error
+            if cantidad > 0 and subtotal_detalle == 0:
+                raise ValueError(
+                    f"Detalle '{det_data.get('concepto', 'Sin concepto')}': "
+                    f"cantidad={cantidad}, precio={precio_unitario}, pero subtotal=0. "
+                    f"Posible error de precisión o precio inválido."
+                )
+
+        # RECALCULAR subtotal capítulo
+        subtotal_cap = redondear_decimal(subtotal_cap)
+        cap_data["subtotal"] = float(subtotal_cap)
+
+        # Validación: capítulo con detalles pero subtotal 0
+        if cap_data.get("detalles") and subtotal_cap == 0:
+            raise ValueError(
+                f"Capítulo '{cap_data.get('nombre', 'Sin nombre')}': "
+                f"tiene detalles pero subtotal calculado es 0€. "
+                f"Revisa los precios unitarios."
+            )
+
+    # RECALCULAR subtotal presupuesto: suma de capítulos
+    subtotal_pres = Decimal("0.00")
+    for cap_data in datos.get("capitulos", []):
+        subtotal_pres += to_decimal(cap_data.get("subtotal", 0))
+
+    subtotal_pres = redondear_decimal(subtotal_pres)
+    datos["subtotal"] = float(subtotal_pres)
+
+    # Validación: presupuesto con capítulos pero subtotal 0
+    if datos.get("capitulos") and subtotal_pres == 0:
+        raise ValueError(
+            "Presupuesto tiene capítulos pero subtotal total es 0€. "
+            "Revisa todos los precios unitarios."
+        )
+
+    # RECALCULAR total: subtotal × 1.21 (IVA 21%)
+    total = redondear_decimal(subtotal_pres * IVA)
+    datos["iva"] = 21.0
+    datos["total"] = float(total)
+
+    return datos
+
+
 @router.post("/presupuesto/ia-rag")
 async def crear_presupuesto(
     solicitud: SolicitudIAPresupuesto, db: Session = Depends(get_db)
 ):
   try:
+    # Determinar modalidad de trabajo
+    modalidad_trabajo = "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE" if solicitud.materiales_por_cliente else "OBRA COMPLETA"
+
     # 2. Generar la estructura con Groq y RAG
     rag_service = PresupuestoRAGService(db=db)
     resultado_rag = rag_service.generar_presupuesto_con_rag(
-        descripcion=solicitud.descripcion, titulo=solicitud.titulo
+        descripcion=solicitud.descripcion,
+        titulo=solicitud.titulo,
+        modalidad_trabajo=modalidad_trabajo,
+        materiales_por_cliente=solicitud.materiales_por_cliente
     )
 
     datos = resultado_rag["presupuesto_estructurado"]
 
-    # Función auxiliar para convertir valores a Decimal de forma segura
-    def to_decimal(val, default=0.0):
-      try:
-        return Decimal(str(val if val is not None else default))
-      except Exception:
-        return Decimal(str(default))
+    # VALIDAR Y RECALCULAR todos los totales para asegurar coherencia aritmética
+    try:
+      datos = validar_y_recalcular_presupuesto(datos)
+    except ValueError as e:
+      raise HTTPException(
+          status_code=status.HTTP_400_BAD_REQUEST,
+          detail=f"Error en la coherencia del presupuesto generado: {str(e)}. "
+                  f"La IA generó datos con inconsistencias aritméticas. "
+                  f"Por favor, intenta de nuevo con una descripción más detallada."
+      )
 
     # 3. Guardar la cabecera del Presupuesto
     presupuesto = Presupuestos(
@@ -60,10 +163,10 @@ async def crear_presupuesto(
         f" {presupuesto.descripcion}\n\nCapítulos y Partidas:\n"
     )
 
-    # 4. Guardar los Capítulos y Detalles desglosados por la IA
+    # 4. Guardar los Capítulos y Detalles (ya recalculados)
     for idx, cap_data in enumerate(datos.get("capitulos", []), start=1):
         nombre_capitulo = cap_data.get("nombre") or cap_data.get("titulo", f"Capítulo {idx}")
-        
+
         capitulo = Capitulos(
           presupuesto_id=presupuesto.id,
           numero=int(cap_data.get("numero", 1)),
@@ -80,22 +183,19 @@ async def crear_presupuesto(
         for det_idx, det_data in enumerate(
             cap_data.get("detalles", []), start=1
         ):
-            # Extraemos el texto del concepto/descripción que devuelve Groq
+            # Extraemos el texto del concepto/descripción
             texto_descripcion = det_data.get("descripcion") or det_data.get(
                 "concepto", ""
             )
-            
-            # Calculamos o mapeamos subtotal/importe
-            subtotal_val = det_data.get("subtotal") or det_data.get("importe", 0.0)
 
             detalle = Detalles(
                 capitulo_id=capitulo.id,
                 numero=int(det_data.get("numero", det_idx)),
                 descripcion=texto_descripcion,
-                unidad=det_data.get("unidad", "ud")[:20],  # Limita a String(20)
-                cantidad=to_decimal(det_data.get("cantidad"), 1.0),
-                precio_unitario=to_decimal(det_data.get("precio_unitario")),
-                subtotal=to_decimal(subtotal_val),
+                unidad=det_data.get("unidad", "ud")[:20],
+                cantidad=to_decimal(det_data.get("cantidad"), 0.0),
+                precio_unitario=to_decimal(det_data.get("precio_unitario"), 0.0),
+                subtotal=to_decimal(det_data.get("subtotal"), 0.0),
                 generado_por_ia=True,
                 precio_confirmado=False,
                 es_externo=False,
@@ -173,18 +273,22 @@ async def listar_presupuestos(
     limit:int = 10,
     db:Session = Depends(get_db)
 ):
-    presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all
+    presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all()
+    total = db.query(Presupuestos).count()
     
-    return [
-        {
+    return {
+        "total":total,
+        "presupuestos":[{ 
             "id": p.id,
+            "codigo":p.codigo,
             "titulo": p.titulo,
             "total": p.total,
             "estado": p.estado,
             "created_at": p.created_at
         }
-        for p in presupuestos
-    ]
+            for p in presupuestos
+        ]
+    }
 
 @router.put('/presupuesto/{presupuesto_id}')
 async def actualizar_presupuesto(
@@ -256,7 +360,7 @@ async def eliminar_presupuesto(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Presupuesto no encontrado"
         )
-    db.delete()
+    db.delete(presupuesto)
     db.commit()
     
     return {"eliminado": True, "presupuesto_id": presupuesto_id}   

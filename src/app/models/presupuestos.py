@@ -13,7 +13,8 @@ if TYPE_CHECKING:
 class EstadoPresupuesto(str, enum.Enum):
     BORRADOR = "Borrador"
     ENVIADO = "Enviado"
-    ACEPTADO = "Aceptado"
+    REVISION = "En Revisión"
+    ACEPTADO = "Aprobado"
     RECHAZADO = "Rechazado"
 
 

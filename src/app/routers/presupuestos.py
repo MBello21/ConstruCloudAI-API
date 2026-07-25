@@ -274,17 +274,21 @@ async def listar_presupuestos(
     db:Session = Depends(get_db)
 ):
     presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all()
+    total = db.query(Presupuestos).count()
     
-    return [
-        {
+    return {
+        "total":total,
+        "presupuestos":[{ 
             "id": p.id,
+            "codigo":p.codigo,
             "titulo": p.titulo,
             "total": p.total,
             "estado": p.estado,
             "created_at": p.created_at
         }
-        for p in presupuestos
-    ]
+            for p in presupuestos
+        ]
+    }
 
 @router.put('/presupuesto/{presupuesto_id}')
 async def actualizar_presupuesto(

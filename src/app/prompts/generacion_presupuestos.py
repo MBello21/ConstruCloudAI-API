@@ -233,7 +233,7 @@ RESPUESTA EN JSON VÁLIDO - ESTRUCTURA EXACTA:
 
 {{
   "titulo": "{titulo}",
-  "descripcion": "Descripción técnica con mediciones explícitas. Separación de solados y alicatados.",
+  "descripcion": "{descripcion}",
   "subtotal": 2390.00,
   "iva": 21.0,
   "total": 2891.90,

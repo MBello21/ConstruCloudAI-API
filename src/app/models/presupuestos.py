@@ -16,7 +16,7 @@ class EstadoPresupuesto(str, enum.Enum):
     REVISION = "En Revisión"
     ACEPTADO = "Aprobado"
     RECHAZADO = "Rechazado"
-
+    
 
 class Presupuestos(Base):
     __tablename__ = 'presupuestos'

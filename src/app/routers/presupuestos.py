@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from sqlalchemy import func
 from decimal import Decimal, ROUND_HALF_UP
 import uuid
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from ..database import get_db
 from ..models.capitulos import Capitulos
@@ -290,6 +292,56 @@ async def listar_presupuestos(
         ]
     }
 
+@router.get('/metricas')
+async def get_metricas(db: Session = Depends(get_db)):
+
+    # Métricas del mes actual
+    total= db.query(Presupuestos).count()
+    aprobados = db.query(Presupuestos).filter(Presupuestos.estado == 'ACEPTADO').count()
+    pendientes = db.query(Presupuestos).filter(
+    Presupuestos.estado.notin_(['Aprobado', 'Rechazado'])
+).count()
+    importe_total = db.query(func.sum(Presupuestos.total)).scalar() or 0
+
+    # Calcular fechas del mes anterior
+    hoy = datetime.now()
+    inicio_mes_actual = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
+    fin_mes_anterior = inicio_mes_actual - relativedelta(seconds=1)
+
+    # Métricas del mes anterior
+    total_mes_anterior = db.query(Presupuestos).filter(
+        Presupuestos.created_at >= inicio_mes_anterior,
+        Presupuestos.created_at < inicio_mes_actual
+    ).count()
+
+    aprobados_mes_anterior = db.query(Presupuestos).filter(
+        Presupuestos.estado == 'ACEPTADO',
+        Presupuestos.created_at >= inicio_mes_anterior,
+        Presupuestos.created_at < inicio_mes_actual
+    ).count()
+
+    importe_mes_anterior = db.query(func.sum(Presupuestos.total)).filter(
+        Presupuestos.created_at >= inicio_mes_anterior,
+        Presupuestos.created_at < inicio_mes_actual
+    ).scalar() or 0
+
+    # Calcular variaciones
+    variacion_total = total - total_mes_anterior
+    variacion_aprobados = aprobados - aprobados_mes_anterior
+    variacion_importe = float(importe_total) - float(importe_mes_anterior or 0)
+
+    return {
+        "total":total,
+        "aprobados":aprobados,
+        "pendientes": pendientes,
+        "tasa_aprobacion": round(aprobados/total * 100, 1) if total > 0 else 0,
+        "importe_total":float(importe_total),
+        "variacion_total": variacion_total,
+        "variacion_aprobados": variacion_aprobados,
+        "variacion_importe": variacion_importe
+    }
+
 @router.put('/presupuesto/{presupuesto_id}')
 async def actualizar_presupuesto(
     presupuesto_id:int,
@@ -364,3 +416,4 @@ async def eliminar_presupuesto(
     db.commit()
     
     return {"eliminado": True, "presupuesto_id": presupuesto_id}   
+

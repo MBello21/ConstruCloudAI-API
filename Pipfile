@@ -25,6 +25,7 @@ alembic = "*"
 groq = "*"
 pgvector = "*"
 requests = "*"
+python-dateutil = "*"
 
 [dev-packages]
 

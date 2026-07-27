@@ -28,7 +28,8 @@ class CapituloPresupuestoResponse(BaseModel):
 
 class PresupuestoCompletoResponse(BaseModel):
     id: int
-    codigo:str
+    
+    codigo: str
     titulo: str
     descripcion: Optional[str] = None
     estado: str
@@ -39,7 +40,7 @@ class PresupuestoCompletoResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        
+
 
 class PresupuestoCreadoResponse(BaseModel):
     mensaje: str
@@ -48,4 +49,3 @@ class PresupuestoCreadoResponse(BaseModel):
     total_capitulos_creados: int
     referencias_usadas: int
     similitud_promedio: float
-    

@@ -17,8 +17,6 @@ from ..schemas.presupuestos import PresupuestoCompletoResponse, PresupuestoCread
 from ..schemas.presupuestos_ia import SolicitudIAPresupuesto
 
 
-
-
 router = APIRouter()
 embedding_service = EmbeddingService()
 
@@ -40,18 +38,7 @@ def redondear_decimal(val, decimales=2):
 
 
 def validar_y_recalcular_presupuesto(datos):
-    """
-    Valida y recalcula todos los totales en un presupuesto estructurado.
-    Asegura coherencia aritmética total.
 
-    Cambios realizados:
-    1. Recalcula subtotal de cada detalle: cantidad × precio_unitario
-    2. Recalcula subtotal de capítulo: suma de detalles
-    3. Recalcula subtotal presupuesto: suma de capítulos
-    4. Recalcula total: subtotal × 1.21 (IVA 21%)
-
-    Lanza excepción si hay inconsistencias graves.
-    """
     IVA = Decimal("1.21")
 
     # Procesar capítulos
@@ -60,11 +47,14 @@ def validar_y_recalcular_presupuesto(datos):
 
         # Procesar detalles de cada capítulo
         for det_data in cap_data.get("detalles", []):
-            cantidad = redondear_decimal(to_decimal(det_data.get("cantidad", 0)))
-            precio_unitario = redondear_decimal(to_decimal(det_data.get("precio_unitario", 0)))
+            cantidad = redondear_decimal(
+                to_decimal(det_data.get("cantidad", 0)))
+            precio_unitario = redondear_decimal(
+                to_decimal(det_data.get("precio_unitario", 0)))
 
             # RECALCULAR subtotal: cantidad × precio_unitario
-            subtotal_detalle = (cantidad * precio_unitario).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            subtotal_detalle = (
+                cantidad * precio_unitario).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
             det_data["cantidad"] = float(cantidad)
             det_data["precio_unitario"] = float(precio_unitario)
@@ -116,200 +106,165 @@ def validar_y_recalcular_presupuesto(datos):
     return datos
 
 
-@router.post("/presupuesto/ia-rag")
+@router.post("/ia-rag")
 async def crear_presupuesto(
     solicitud: SolicitudIAPresupuesto, db: Session = Depends(get_db)
 ):
-  try:
-    # Determinar modalidad de trabajo
-    modalidad_trabajo = "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE" if solicitud.materiales_por_cliente else "OBRA COMPLETA"
-
-    # 2. Generar la estructura con Groq y RAG
-    rag_service = PresupuestoRAGService(db=db)
-    resultado_rag = rag_service.generar_presupuesto_con_rag(
-        descripcion=solicitud.descripcion,
-        titulo=solicitud.titulo,
-        modalidad_trabajo=modalidad_trabajo,
-        materiales_por_cliente=solicitud.materiales_por_cliente
-    )
-
-    datos = resultado_rag["presupuesto_estructurado"]
-
-    # VALIDAR Y RECALCULAR todos los totales para asegurar coherencia aritmética
     try:
-      datos = validar_y_recalcular_presupuesto(datos)
-    except ValueError as e:
-      raise HTTPException(
-          status_code=status.HTTP_400_BAD_REQUEST,
-          detail=f"Error en la coherencia del presupuesto generado: {str(e)}. "
-                  f"La IA generó datos con inconsistencias aritméticas. "
-                  f"Por favor, intenta de nuevo con una descripción más detallada."
-      )
+        # Determinar modalidad de trabajo
+        modalidad_trabajo = "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE" if solicitud.materiales_por_cliente else "OBRA COMPLETA"
 
-    # 3. Guardar la cabecera del Presupuesto
-    presupuesto = Presupuestos(
-        codigo=f"PRES-{uuid.uuid4().hex[:8].upper()}",
-        titulo=datos.get("titulo", solicitud.titulo),
-        descripcion=datos.get("descripcion", solicitud.descripcion),
-        subtotal=to_decimal(datos.get("subtotal")),
-        iva=to_decimal(datos.get("iva"), 21.0),
-        total=to_decimal(datos.get("total")),
-        condiciones_pago=datos.get("condiciones_pago"),
-        validez_dias=int(datos.get("validez_dias", 30)),
-    )
-    db.add(presupuesto)
-    db.flush()  # Genera presupuesto.id
-
-    texto_completo_para_rag = (
-        f"Título: {presupuesto.titulo}\nDescripción:"
-        f" {presupuesto.descripcion}\n\nCapítulos y Partidas:\n"
-    )
-
-    # 4. Guardar los Capítulos y Detalles (ya recalculados)
-    for idx, cap_data in enumerate(datos.get("capitulos", []), start=1):
-        nombre_capitulo = cap_data.get("nombre") or cap_data.get("titulo", f"Capítulo {idx}")
-
-        capitulo = Capitulos(
-          presupuesto_id=presupuesto.id,
-          numero=int(cap_data.get("numero", 1)),
-          nombre=nombre_capitulo,
-          orden=idx
-        )
-        db.add(capitulo)
-        db.flush()  # Genera capitulo.id
-
-        texto_completo_para_rag += (
-            f"\nCapítulo {capitulo.numero}: {capitulo.nombre}\n"
+        # 2. Generar la estructura con Groq y RAG
+        rag_service = PresupuestoRAGService(db=db)
+        resultado_rag = rag_service.generar_presupuesto_con_rag(
+            descripcion=solicitud.descripcion,
+            titulo=solicitud.titulo,
+            modalidad_trabajo=modalidad_trabajo,
+            materiales_por_cliente=solicitud.materiales_por_cliente
         )
 
-        for det_idx, det_data in enumerate(
-            cap_data.get("detalles", []), start=1
-        ):
-            # Extraemos el texto del concepto/descripción
-            texto_descripcion = det_data.get("descripcion") or det_data.get(
-                "concepto", ""
+        datos = resultado_rag["presupuesto_estructurado"]
+
+        # VALIDAR Y RECALCULAR todos los totales para asegurar coherencia aritmética
+        try:
+            datos = validar_y_recalcular_presupuesto(datos)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Error en la coherencia del presupuesto generado: {str(e)}. "
+                f"La IA generó datos con inconsistencias aritméticas. "
+                f"Por favor, intenta de nuevo con una descripción más detallada."
             )
 
-            detalle = Detalles(
-                capitulo_id=capitulo.id,
-                numero=int(det_data.get("numero", det_idx)),
-                descripcion=texto_descripcion,
-                unidad=det_data.get("unidad", "ud")[:20],
-                cantidad=to_decimal(det_data.get("cantidad"), 0.0),
-                precio_unitario=to_decimal(det_data.get("precio_unitario"), 0.0),
-                subtotal=to_decimal(det_data.get("subtotal"), 0.0),
-                generado_por_ia=True,
-                precio_confirmado=False,
-                es_externo=False,
+        # 3. Guardar la cabecera del Presupuesto
+        presupuesto = Presupuestos(
+            codigo=f"PRES-{uuid.uuid4().hex[:8].upper()}",
+            titulo=datos.get("titulo", solicitud.titulo),
+            descripcion=datos.get("descripcion", solicitud.descripcion),
+            subtotal=to_decimal(datos.get("subtotal")),
+            iva=to_decimal(datos.get("iva"), 21.0),
+            total=to_decimal(datos.get("total")),
+            condiciones_pago=datos.get("condiciones_pago"),
+            validez_dias=int(datos.get("validez_dias", 30)),
+        )
+        db.add(presupuesto)
+        db.flush()  # Genera presupuesto.id
+
+        texto_completo_para_rag = (
+            f"Título: {presupuesto.titulo}\nDescripción:"
+            f" {presupuesto.descripcion}\n\nCapítulos y Partidas:\n"
+        )
+
+        # 4. Guardar los Capítulos y Detalles (ya recalculados)
+        for idx, cap_data in enumerate(datos.get("capitulos", []), start=1):
+            nombre_capitulo = cap_data.get("nombre") or cap_data.get(
+                "titulo", f"Capítulo {idx}")
+
+            capitulo = Capitulos(
+                presupuesto_id=presupuesto.id,
+                numero=int(cap_data.get("numero", 1)),
+                nombre=nombre_capitulo,
+                orden=idx
             )
-            db.add(detalle)
+            db.add(capitulo)
+            db.flush()  # Genera capitulo.id
+
             texto_completo_para_rag += (
-                f"  - {detalle.descripcion} | {detalle.cantidad}"
-                f" {detalle.unidad} x {detalle.precio_unitario}€ ="
-                f" {detalle.subtotal}€\n"
+                f"\nCapítulo {capitulo.numero}: {capitulo.nombre}\n"
             )
 
-    # Guardar el contexto RAG enriquecido
-    presupuesto.contexto_rag = texto_completo_para_rag.strip()
+            for det_idx, det_data in enumerate(
+                cap_data.get("detalles", []), start=1
+            ):
+                # Extraemos el texto del concepto/descripción
+                texto_descripcion = det_data.get("descripcion") or det_data.get(
+                    "concepto", ""
+                )
 
-    # 5. Generar y guardar embedding vectorial
-    embedding_vector = None
-    try:
-      embedding_vector = embedding_service.generar_embedding(
-          texto_completo_para_rag
-      )
-      if embedding_vector:
-        embedding_record = PresupuestoEmbedding(
-            presupuesto_id=presupuesto.id,
-            contenido_indexado=texto_completo_para_rag.strip(),
-            embedding=embedding_vector,
-        )
-        db.add(embedding_record)
-    except Exception as e:
-      print(f"⚠️ Error generando embedding final: {e}")
+                detalle = Detalles(
+                    capitulo_id=capitulo.id,
+                    numero=int(det_data.get("numero", det_idx)),
+                    descripcion=texto_descripcion,
+                    unidad=det_data.get("unidad", "ud")[:20],
+                    cantidad=to_decimal(det_data.get("cantidad"), 0.0),
+                    precio_unitario=to_decimal(
+                        det_data.get("precio_unitario"), 0.0),
+                    subtotal=to_decimal(det_data.get("subtotal"), 0.0),
+                    generado_por_ia=True,
+                    precio_confirmado=False,
+                    es_externo=False,
+                )
+                db.add(detalle)
+                texto_completo_para_rag += (
+                    f"  - {detalle.descripcion} | {detalle.cantidad}"
+                    f" {detalle.unidad} x {detalle.precio_unitario}€ ="
+                    f" {detalle.subtotal}€\n"
+                )
 
-    # Confirmar transacción en la base de datos
-    db.commit()
-    db.refresh(presupuesto)
-    
-    datos_respuesta = {
-        "mensaje": "Presupuesto, capítulos y detalles creados con éxito",
-        "presupuesto_id": presupuesto.id,
-        "codigo": presupuesto.codigo,
-        "total_capitulos_creados": len(presupuesto.capitulos),
-        "referencias_usadas": resultado_rag.get("cantidad_referencias", 0),
-        "similitud_promedio": resultado_rag.get("similitud_promedio", 0.0),
-    }
+        # Guardar el contexto RAG enriquecido
+        presupuesto.contexto_rag = texto_completo_para_rag.strip()
 
-    return PresupuestoCreadoResponse.model_validate(datos_respuesta)
+        # 5. Generar y guardar embedding vectorial
+        embedding_vector = None
+        try:
+            embedding_vector = embedding_service.generar_embedding(
+                texto_completo_para_rag
+            )
+            if embedding_vector:
+                embedding_record = PresupuestoEmbedding(
+                    presupuesto_id=presupuesto.id,
+                    contenido_indexado=texto_completo_para_rag.strip(),
+                    embedding=embedding_vector,
+                )
+                db.add(embedding_record)
+        except Exception as e:
+            print(f"⚠️ Error generando embedding final: {e}")
 
-  except Exception as e:
-    db.rollback()
-    # Muestra el error exacto en los logs y en la respuesta HTTP
-    print(f"❌ Error en la persistencia de datos: {e}")
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail=f"Error guardando presupuesto en BD: {str(e)}",
-    )
-        
-@router.get('/presupuesto/{presupuesto_id}')
-def obtener_presupuesto(
-    presupuesto_id:int,
-    db:Session = Depends(get_db)
-):
-    presupuesto= db.query(Presupuestos).filter(
-        Presupuestos.id == presupuesto_id
-    ).first()
-    
-    if not presupuesto:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Presupuesto no encontrado"
-        )
-        
-    return PresupuestoCompletoResponse.model_validate(presupuesto)
+        # Confirmar transacción en la base de datos
+        db.commit()
+        db.refresh(presupuesto)
 
-@router.get('/presupuestos')
-async def listar_presupuestos(
-    skip:int = 0,
-    limit:int = 10,
-    db:Session = Depends(get_db)
-):
-    presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all()
-    total = db.query(Presupuestos).count()
-    
-    return {
-        "total":total,
-        "presupuestos":[{ 
-            "id": p.id,
-            "codigo":p.codigo,
-            "titulo": p.titulo,
-            "total": p.total,
-            "estado": p.estado,
-            "created_at": p.created_at
+        datos_respuesta = {
+            "mensaje": "Presupuesto, capítulos y detalles creados con éxito",
+            "presupuesto_id": presupuesto.id,
+            "codigo": presupuesto.codigo,
+            "total_capitulos_creados": len(presupuesto.capitulos),
+            "referencias_usadas": resultado_rag.get("cantidad_referencias", 0),
+            "similitud_promedio": resultado_rag.get("similitud_promedio", 0.0),
         }
-            for p in presupuestos
-        ]
-    }
+
+        return PresupuestoCreadoResponse.model_validate(datos_respuesta)
+
+    except Exception as e:
+        db.rollback()
+        # Muestra el error exacto en los logs y en la respuesta HTTP
+        print(f"❌ Error en la persistencia de datos: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error guardando presupuesto en BD: {str(e)}",
+        )
+
 
 @router.get('/metricas')
 async def get_metricas(db: Session = Depends(get_db)):
 
-    # Métricas del mes actual
-    total= db.query(Presupuestos).count()
-    aprobados = db.query(Presupuestos).filter(Presupuestos.estado == 'ACEPTADO').count()
+    
+    total = db.query(Presupuestos).count()
+    aprobados = db.query(Presupuestos).filter(
+        Presupuestos.estado == 'ACEPTADO').count()
     pendientes = db.query(Presupuestos).filter(
-    Presupuestos.estado.notin_(['Aprobado', 'Rechazado'])
-).count()
+        Presupuestos.estado.notin_(['Aprobado', 'Rechazado'])
+    ).count()
     importe_total = db.query(func.sum(Presupuestos.total)).scalar() or 0
 
-    # Calcular fechas del mes anterior
+    
     hoy = datetime.now()
-    inicio_mes_actual = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio_mes_actual = hoy.replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0)
     inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
     fin_mes_anterior = inicio_mes_actual - relativedelta(seconds=1)
 
-    # Métricas del mes anterior
+   
     total_mes_anterior = db.query(Presupuestos).filter(
         Presupuestos.created_at >= inicio_mes_anterior,
         Presupuestos.created_at < inicio_mes_actual
@@ -326,52 +281,95 @@ async def get_metricas(db: Session = Depends(get_db)):
         Presupuestos.created_at < inicio_mes_actual
     ).scalar() or 0
 
-    # Calcular variaciones
+    
     variacion_total = total - total_mes_anterior
     variacion_aprobados = aprobados - aprobados_mes_anterior
     variacion_importe = float(importe_total) - float(importe_mes_anterior or 0)
 
     return {
-        "total":total,
-        "aprobados":aprobados,
+        "total": total,
+        "aprobados": aprobados,
         "pendientes": pendientes,
         "tasa_aprobacion": round(aprobados/total * 100, 1) if total > 0 else 0,
-        "importe_total":float(importe_total),
+        "importe_total": float(importe_total),
         "variacion_total": variacion_total,
         "variacion_aprobados": variacion_aprobados,
         "variacion_importe": variacion_importe
     }
 
-@router.put('/presupuesto/{presupuesto_id}')
-async def actualizar_presupuesto(
-    presupuesto_id:int,
-    titulo:str = None,
-    descripcion:str = None,
-    estado:str = None,
+
+@router.get('/{presupuesto_id}')
+def obtener_presupuesto(
+    presupuesto_id: int,
     db: Session = Depends(get_db)
 ):
     presupuesto = db.query(Presupuestos).filter(
         Presupuestos.id == presupuesto_id
     ).first()
-    
+
     if not presupuesto:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Presupuesto no encontrado"
         )
-    
+
+    return PresupuestoCompletoResponse.model_validate(presupuesto)
+
+
+@router.get('')
+async def listar_presupuestos(
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all()
+    total = db.query(Presupuestos).count()
+
+    return {
+        "total": total,
+        "presupuestos": [{
+            "id": p.id,
+            "codigo": p.codigo,
+            "titulo": p.titulo,
+            "total": p.total,
+            "estado": p.estado,
+            "created_at": p.created_at
+        }
+            for p in presupuestos
+        ]
+    }
+
+
+@router.put('/{presupuesto_id}')
+async def actualizar_presupuesto(
+    presupuesto_id: int,
+    titulo: str = None,
+    descripcion: str = None,
+    estado: str = None,
+    db: Session = Depends(get_db)
+):
+    presupuesto = db.query(Presupuestos).filter(
+        Presupuestos.id == presupuesto_id
+    ).first()
+
+    if not presupuesto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presupuesto no encontrado"
+        )
+
     if titulo:
         presupuesto.titulo = titulo
-    
+
     if descripcion:
         presupuesto.descripcion = descripcion
     if estado:
         presupuesto.estado = estado
-    
+
     if descripcion:
         try:
             contenido = f"Título: {presupuesto.titulo}\nDescripción: {presupuesto.descripcion}\nTotal: {presupuesto.total}"
-            
+
             nuevo_embedding = embedding_service.generar_embedding(contenido)
 
             embedding_record = db.query(PresupuestoEmbedding).filter(
@@ -381,24 +379,25 @@ async def actualizar_presupuesto(
             if embedding_record:
                 embedding_record.embedding = nuevo_embedding
                 embedding_record.contenido_indexado = contenido
-            
+
             else:
-                embedding_record= PresupuestoEmbedding(
+                embedding_record = PresupuestoEmbedding(
                     presupuesto_id=presupuesto_id,
                     contenido_indexado=contenido,
                     embedding=nuevo_embedding
                 )
                 db.add(embedding_record)
-        
+
         except Exception as e:
             print(f"⚠️ Error regenerando embedding: {e}")
-    
+
     db.commit()
     db.refresh(presupuesto)
-    
+
     return {"id": presupuesto.id, "titulo": presupuesto.titulo, "actualizado": True}
 
-@router.delete('/presupuesto/{presupuesto_id}')
+
+@router.delete('/{presupuesto_id}')
 async def eliminar_presupuesto(
     presupuesto_id: int,
     db: Session = Depends(get_db)
@@ -406,7 +405,7 @@ async def eliminar_presupuesto(
     presupuesto = db.query(Presupuestos).filter(
         Presupuestos.id == presupuesto_id
     ).first()
-    
+
     if not presupuesto:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -414,6 +413,5 @@ async def eliminar_presupuesto(
         )
     db.delete(presupuesto)
     db.commit()
-    
-    return {"eliminado": True, "presupuesto_id": presupuesto_id}   
 
+    return {"eliminado": True, "presupuesto_id": presupuesto_id}

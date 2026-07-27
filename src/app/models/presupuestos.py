@@ -1,13 +1,15 @@
 from typing import TYPE_CHECKING
 from datetime import datetime
-from sqlalchemy import func, String, Text, Numeric, Integer, DateTime, Enum as SQLEnum
+from sqlalchemy import func, String, Text, Numeric, Integer, DateTime, ForeignKey,  Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 import enum
 
+
 if TYPE_CHECKING:
     from .capitulos import Capitulos
     from .presupuesto_embedding import PresupuestoEmbedding
+    from .clientes import Clientes
 
 
 class EstadoPresupuesto(str, enum.Enum):
@@ -16,12 +18,16 @@ class EstadoPresupuesto(str, enum.Enum):
     REVISION = "En Revisión"
     ACEPTADO = "Aprobado"
     RECHAZADO = "Rechazado"
-    
+
 
 class Presupuestos(Base):
     __tablename__ = 'presupuestos'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    cliente_id: Mapped[int] = mapped_column(
+        ForeignKey('clientes.id'), nullable=True)
+    cliente: Mapped["Clientes"] = relationship(
+        "Clientes", back_populates="presupuestos")
     codigo: Mapped[str] = mapped_column(String(50), unique=True)
     titulo: Mapped[str] = mapped_column(String(300), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text)

@@ -13,7 +13,7 @@
         3000,
         3001
     ],
-    "onCreateCommand": "(cp .env.example .env || echo \".env creation failed\"); (pipenv install || echo \"pipenv install failed\"); (bash database.sh || echo \"database.sh failed\");",
+    "onCreateCommand": "(cp -n .env.example .env || echo \".env creation failed\"); (pipenv install || echo \"pipenv install failed\"); (bash database.sh || echo \"database.sh failed\");",
     "postCreateCommand": "python docs/assets/greeting.py both || echo 'Greeting script skipped'",
     "customizations": {
         "vscode": {

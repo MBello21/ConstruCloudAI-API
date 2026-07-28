@@ -1,12 +1,11 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api.router_global import api_router
-from src.database import Base, engine
+from .router_global import api_router
+from .database import Base, engine
 
 app = FastAPI(
     title='Api modular FastAPI',
-    description='Backend escalable',
+    description='ConstruCloudAI API',
     version='1.0.0'
 )
 

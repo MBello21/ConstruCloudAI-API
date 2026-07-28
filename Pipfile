@@ -4,7 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [scripts]
-start = "uvicorn src.app:app --reload --host 0.0.0.0 --port 3001"
+start = "uvicorn src.app.app:app --reload --host 0.0.0.0 --port 3001"
+migrate = "alembic revision --autogenerate"
+upgrade = "alembic upgrade head"
+downgrade = "alembic downgrade -1"
 
 [packages]
 fastapi = "*"
@@ -16,8 +19,13 @@ python-jose = {extras = ["cryptography"], version = "*"}
 passlib = {extras = ["bcrypt"], version = "*"}
 pydantic = "*"
 email-validator = "*"
-dotenv = "*"
 bcrypt = "==4.0.1"
+alembic = "*"
+groq = "*"
+pgvector = "*"
+requests = "*"
+python-dateutil = "*"
+dotenv = "*"
 
 [dev-packages]
 

@@ -13,5 +13,4 @@ class UserResponse(BaseModel):
     username: str
     is_active: bool
 
-    class Config:
-        from_atributes = True
+    model_config = {"from_attributes": True}

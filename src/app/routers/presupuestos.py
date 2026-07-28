@@ -13,7 +13,7 @@ from ..models.presupuesto_embedding import PresupuestoEmbedding
 from ..models.presupuestos import Presupuestos
 from ..services.embedding_service import EmbeddingService
 from ..services.presupuesto_rag_service import PresupuestoRAGService
-from ..schemas.presupuestos import PresupuestoCompletoResponse, PresupuestoCreadoResponse
+from ..schemas.presupuestos import PresupuestoCompletoResponse, PresupuestoCreadoResponse, ActualizarPresupuesto
 from ..schemas.presupuestos_ia import SolicitudIAPresupuesto
 
 
@@ -248,7 +248,6 @@ async def crear_presupuesto(
 @router.get('/metricas')
 async def get_metricas(db: Session = Depends(get_db)):
 
-    
     total = db.query(Presupuestos).count()
     aprobados = db.query(Presupuestos).filter(
         Presupuestos.estado == 'ACEPTADO').count()
@@ -257,14 +256,12 @@ async def get_metricas(db: Session = Depends(get_db)):
     ).count()
     importe_total = db.query(func.sum(Presupuestos.total)).scalar() or 0
 
-    
     hoy = datetime.now()
     inicio_mes_actual = hoy.replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)
     inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
     fin_mes_anterior = inicio_mes_actual - relativedelta(seconds=1)
 
-   
     total_mes_anterior = db.query(Presupuestos).filter(
         Presupuestos.created_at >= inicio_mes_anterior,
         Presupuestos.created_at < inicio_mes_actual
@@ -281,7 +278,6 @@ async def get_metricas(db: Session = Depends(get_db)):
         Presupuestos.created_at < inicio_mes_actual
     ).scalar() or 0
 
-    
     variacion_total = total - total_mes_anterior
     variacion_aprobados = aprobados - aprobados_mes_anterior
     variacion_importe = float(importe_total) - float(importe_mes_anterior or 0)
@@ -330,6 +326,7 @@ async def listar_presupuestos(
         "presupuestos": [{
             "id": p.id,
             "codigo": p.codigo,
+            "nombre_cliente": p.cliente.nombre_cliente if p.cliente else None,
             "titulo": p.titulo,
             "total": p.total,
             "estado": p.estado,
@@ -343,53 +340,25 @@ async def listar_presupuestos(
 @router.put('/{presupuesto_id}')
 async def actualizar_presupuesto(
     presupuesto_id: int,
-    titulo: str = None,
-    descripcion: str = None,
-    estado: str = None,
+    datos: ActualizarPresupuesto,
     db: Session = Depends(get_db)
 ):
+
     presupuesto = db.query(Presupuestos).filter(
-        Presupuestos.id == presupuesto_id
-    ).first()
+        Presupuestos.id == presupuesto_id).first()
 
     if not presupuesto:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Presupuesto no encontrado"
-        )
+            status_code=404, detail="Presupuesto no encontrado")
 
-    if titulo:
-        presupuesto.titulo = titulo
-
-    if descripcion:
-        presupuesto.descripcion = descripcion
-    if estado:
-        presupuesto.estado = estado
-
-    if descripcion:
-        try:
-            contenido = f"Título: {presupuesto.titulo}\nDescripción: {presupuesto.descripcion}\nTotal: {presupuesto.total}"
-
-            nuevo_embedding = embedding_service.generar_embedding(contenido)
-
-            embedding_record = db.query(PresupuestoEmbedding).filter(
-                PresupuestoEmbedding.presupuesto_id == presupuesto_id
-            ).first()
-
-            if embedding_record:
-                embedding_record.embedding = nuevo_embedding
-                embedding_record.contenido_indexado = contenido
-
-            else:
-                embedding_record = PresupuestoEmbedding(
-                    presupuesto_id=presupuesto_id,
-                    contenido_indexado=contenido,
-                    embedding=nuevo_embedding
-                )
-                db.add(embedding_record)
-
-        except Exception as e:
-            print(f"⚠️ Error regenerando embedding: {e}")
+    if datos.titulo:
+        presupuesto.titulo = datos.titulo
+    if datos.descripcion:
+        presupuesto.descripcion = datos.descripcion
+    if datos.estado:
+        presupuesto.estado = datos.estado
+    if datos.cliente_id:
+        presupuesto.cliente_id = datos.cliente_id
 
     db.commit()
     db.refresh(presupuesto)

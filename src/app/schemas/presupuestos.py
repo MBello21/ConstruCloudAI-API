@@ -2,6 +2,20 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
+class ClienteBasico(BaseModel):
+    nombre_cliente: str
+
+    class Config:
+        from_attributes = True
+
+
+class ActualizarPresupuesto(BaseModel):
+    titulo: str | None = None
+    descripcion: str | None = None
+    estado: str | None = None
+    cliente_id: int | None = None
+
+
 class DetallePresupuestoResponse(BaseModel):
     id: int
     numero: int
@@ -28,7 +42,7 @@ class CapituloPresupuestoResponse(BaseModel):
 
 class PresupuestoCompletoResponse(BaseModel):
     id: int
-    
+    cliente: Optional[ClienteBasico] = None
     codigo: str
     titulo: str
     descripcion: Optional[str] = None
@@ -46,6 +60,7 @@ class PresupuestoCreadoResponse(BaseModel):
     mensaje: str
     presupuesto_id: int
     codigo: str
+    cliente: Optional[ClienteBasico] = None
     total_capitulos_creados: int
     referencias_usadas: int
     similitud_promedio: float

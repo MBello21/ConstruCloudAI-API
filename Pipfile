@@ -25,6 +25,10 @@ groq = "*"
 pgvector = "*"
 requests = "*"
 python-dateutil = "*"
+<<<<<<< HEAD
+=======
+dotenv = "*"
+>>>>>>> 482b90c2a11552e1eac1cc13373dcabe016d702e
 
 [dev-packages]
 

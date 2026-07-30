@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 import enum
 
-
 if TYPE_CHECKING:
     from .capitulos import Capitulos
     from .presupuesto_embedding import PresupuestoEmbedding
@@ -66,3 +65,4 @@ class Presupuestos(Base):
 
     def __repr__(self):
         return f"<Presupuestos(id={self.id}, codigo={self.codigo})>"
+

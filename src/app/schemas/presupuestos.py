@@ -64,3 +64,4 @@ class PresupuestoCreadoResponse(BaseModel):
     total_capitulos_creados: int
     referencias_usadas: int
     similitud_promedio: float
+

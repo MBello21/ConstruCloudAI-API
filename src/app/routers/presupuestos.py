@@ -384,3 +384,4 @@ async def eliminar_presupuesto(
     db.commit()
 
     return {"eliminado": True, "presupuesto_id": presupuesto_id}
+

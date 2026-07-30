@@ -1,7 +1,6 @@
 from sqlalchemy import func, String, Text, ForeignKey, Integer, Numeric, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
-from datetime import datetime
 from ..database import Base
 from .presupuestos import Presupuestos
 

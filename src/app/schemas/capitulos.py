@@ -3,7 +3,7 @@ from typing import List, Optional
 
 
 class CapituloCreate(BaseModel):
-    presupuesto_id: str
+    presupuesto_id: int
     numero: int
     nombre: str
     orden: int = 0
@@ -18,9 +18,9 @@ class CapituloUpdate(BaseModel):
 class CapituloResponse(BaseModel):
     id: int
     presupuesto_id: int
-    numero:int
-    nombre:str
+    numero: int
+    nombre: str
     orden: int
-    
+
     class Config:
         from_attributes = True

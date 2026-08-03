@@ -19,6 +19,10 @@ class ClienteResponse(BaseModel):
     poblacion: str
     telefono: str
     email: Optional[str] = None
+    estado: Optional[str] = "Activo"
+    tipo: Optional[str] = "Empresa"
+    cif: Optional[str] = None
+    notas: Optional[str] = None
     presupuestos: List[PresupuestoResumen] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -30,3 +34,7 @@ class ClienteCreate(BaseModel):
     poblacion: str
     telefono: str
     email: Optional[str] = None
+    estado: Optional[str] = "Activo"
+    tipo: Optional[str] = "Empresa"
+    cif: Optional[str] = None
+    notas: Optional[str] = None

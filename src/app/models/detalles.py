@@ -24,7 +24,7 @@ class Detalles(Base):
     precio_unitario: Mapped[int] = mapped_column(
         Numeric, nullable=False, default=0)
     subtotal: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
-    generado_por_ia: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    generado_por_ia: Mapped[bool] = mapped_column(default=False)
     precio_confirmado: Mapped[bool] = mapped_column(Boolean, nullable=False)
     es_externo: Mapped[bool] = mapped_column(Boolean, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

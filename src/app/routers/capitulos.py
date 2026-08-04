@@ -7,7 +7,7 @@ from ..models.capitulos import Capitulos
 from ..schemas.capitulos import CapituloUpdate, CapituloCreate, CapituloResponse
 
 
-router = APIRouter(prefix="/capitulos")
+router = APIRouter()
 
 
 @router.post("", response_model=CapituloResponse, status_code=status.HTTP_201_CREATED)
@@ -68,7 +68,17 @@ def eliminar_capitulo(capitulo_id: int, db: Session = Depends(get_db)):
             detail="Capitulo no encontrado"
         )
 
+    presupuesto = capitulo.presupuesto
     db.delete(capitulo)
-    db.commit()
+    db.flush()
 
+    subtotal = sum(
+        d.subtotal or 0
+        for cap in presupuesto.capitulos
+        for d in cap.detalles
+    )
+    presupuesto.subtotal = subtotal
+    presupuesto.total = subtotal * (1 + (presupuesto.iva or 21) / 100)
+
+    db.commit()
     return {"eliminado": True}

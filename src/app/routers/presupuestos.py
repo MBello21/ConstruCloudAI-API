@@ -316,11 +316,17 @@ def obtener_presupuesto(
 async def listar_presupuestos(
     skip: int = 0,
     limit: int = 10,
+    estado: str = None,
     db: Session = Depends(get_db)
 ):
-    presupuestos = db.query(Presupuestos).offset(skip).limit(limit).all()
-    total = db.query(Presupuestos).count()
+    query = db.query(Presupuestos)
 
+    if estado and estado != 'Todos':
+        query = query.filter(Presupuestos.estado == estado)
+
+    total = query.count()
+    presupuestos = query.order_by(
+        Presupuestos.created_at.desc()).offset(skip).limit(limit).all()
     return {
         "total": total,
         "presupuestos": [{
@@ -359,6 +365,12 @@ async def actualizar_presupuesto(
         presupuesto.estado = datos.estado
     if datos.cliente_id:
         presupuesto.cliente_id = datos.cliente_id
+    if datos.validez_dias is not None:
+        presupuesto.validez_dias = datos.validez_dias
+    if datos.condiciones_pago is not None:
+        presupuesto.condiciones_pago = datos.condiciones_pago
+    if datos.iva is not None:
+        presupuesto.iva = datos.iva
 
     db.commit()
     db.refresh(presupuesto)
@@ -384,4 +396,3 @@ async def eliminar_presupuesto(
     db.commit()
 
     return {"eliminado": True, "presupuesto_id": presupuesto_id}
-

@@ -3,6 +3,7 @@ from typing import List, Optional
 
 
 class ClienteBasico(BaseModel):
+    id: int
     nombre_cliente: str
 
     class Config:
@@ -14,6 +15,9 @@ class ActualizarPresupuesto(BaseModel):
     descripcion: str | None = None
     estado: str | None = None
     cliente_id: int | None = None
+    validez_dias: int | None = None
+    condiciones_pago: str | None = None
+    iva: float | None = None
 
 
 class DetallePresupuestoResponse(BaseModel):
@@ -42,9 +46,11 @@ class CapituloPresupuestoResponse(BaseModel):
 
 class PresupuestoCompletoResponse(BaseModel):
     id: int
-    cliente: Optional[ClienteBasico] = None
+    cliente_id: Optional[int] = None
     codigo: str
     titulo: str
+    condiciones_pago: str
+    validez_dias: int
     descripcion: Optional[str] = None
     estado: str
     subtotal: float
@@ -64,4 +70,3 @@ class PresupuestoCreadoResponse(BaseModel):
     total_capitulos_creados: int
     referencias_usadas: int
     similitud_promedio: float
-

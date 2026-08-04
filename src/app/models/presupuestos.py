@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class EstadoPresupuesto(str, enum.Enum):
     BORRADOR = "Borrador"
     ENVIADO = "Enviado"
-    REVISION = "En Revisión"
+    REVISION = "En Revision"
     ACEPTADO = "Aprobado"
     RECHAZADO = "Rechazado"
 
@@ -30,9 +30,10 @@ class Presupuestos(Base):
     codigo: Mapped[str] = mapped_column(String(50), unique=True)
     titulo: Mapped[str] = mapped_column(String(300), nullable=False)
     descripcion: Mapped[str] = mapped_column(Text)
-    estado: Mapped[EstadoPresupuesto] = mapped_column(
-        SQLEnum(EstadoPresupuesto),
-        default=EstadoPresupuesto.BORRADOR
+    estado: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="Borrador"
     )
     subtotal: Mapped[int] = mapped_column(Numeric, nullable=False, default=0)
     iva: Mapped[int] = mapped_column(Numeric, nullable=False, default=21.00)
@@ -51,7 +52,8 @@ class Presupuestos(Base):
     capitulos: Mapped[list["Capitulos"]] = relationship(
         "Capitulos",
         back_populates="presupuesto",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        order_by="Capitulos.numero"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -65,4 +67,3 @@ class Presupuestos(Base):
 
     def __repr__(self):
         return f"<Presupuestos(id={self.id}, codigo={self.codigo})>"
-

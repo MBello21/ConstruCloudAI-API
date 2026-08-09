@@ -113,7 +113,6 @@ Autenticación y autorización del sistema.
 # Campos principales
 id: int                        # ID único (PK)
 email: str(120, unique)       # Email único
-username: str(50, unique)     # Nombre usuario único
 password_hash: str(256)       # Hash seguro de contraseña
 is_active: bool               # Usuario activo/inactivo
 ```
@@ -495,7 +494,7 @@ subtotal = cantidad × precio_unitario
 
 # Campos UNIQUE
 - Presupuestos.codigo
-- Users.email, username
+- Users.email
 
 # Foreign Keys
 - Capítulos.presupuesto_id → Presupuestos.id (nullable: sí)

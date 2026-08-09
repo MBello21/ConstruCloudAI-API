@@ -99,21 +99,74 @@ def validar_y_recalcular_presupuesto(datos):
     return datos
 
 
-def crear_presupuesto_con_rag(
-    db: Session,
-    titulo: str,
-    descripcion: str,
-    materiales_por_cliente: bool = False
-) -> dict:
+CONDICIONES_PAGO_POR_DEFECTO = (
+    "50% a la firma del presupuesto, 50% a la finalización de los trabajos"
+)
+
+
+def normalizar_estructura(datos: dict, titulo: str = "", descripcion: str = "") -> dict:
     """
-    Crea un presupuesto completo usando IA y RAG.
-    Retorna dict con datos de la creación.
-    Lanza ValueError si hay errores en validación.
+    Normaliza las claves que la IA puede devolver con nombres alternativos
+    (capítulo `titulo`/`nombre`, detalle `concepto`/`descripcion`) para que la
+    estructura que ve el frontend coincida con `EstructuraPresupuesto`.
     """
-    embedding_service = EmbeddingService()
+    datos["titulo"] = datos.get("titulo") or titulo
+    datos["descripcion"] = datos.get("descripcion") or descripcion
+    datos["condiciones_pago"] = (
+        datos.get("condiciones_pago") or CONDICIONES_PAGO_POR_DEFECTO
+    )
+    datos["validez_dias"] = int(datos.get("validez_dias") or 30)
+
+    capitulos = []
+    for idx, cap_data in enumerate(datos.get("capitulos", []) or [], start=1):
+        cap_data["nombre"] = (
+            cap_data.get("nombre") or cap_data.get("titulo") or f"Capítulo {idx}"
+        )
+        cap_data.pop("titulo", None)
+        cap_data["numero"] = int(cap_data.get("numero") or idx)
+        cap_data["orden"] = int(cap_data.get("orden") or idx)
+
+        detalles = []
+        for det_idx, det_data in enumerate(cap_data.get("detalles", []) or [], start=1):
+            det_data["descripcion"] = (
+                det_data.get("descripcion") or det_data.get("concepto") or ""
+            )
+            det_data.pop("concepto", None)
+            det_data.pop("importe", None)
+            det_data["numero"] = int(det_data.get("numero") or det_idx)
+            det_data["unidad"] = (det_data.get("unidad") or "ud")[:20]
+            det_data["generado_por_ia"] = True
+            det_data["precio_confirmado"] = False
+            det_data["es_externo"] = False
+            detalles.append(det_data)
+
+        cap_data["detalles"] = detalles
+        capitulos.append(cap_data)
+
+    datos["capitulos"] = capitulos
+    return datos
+
+
+def generar_presupuesto_ia(db: Session, solicitud) -> dict:
+    """
+    Genera con IA + RAG la estructura de un presupuesto SIN persistir nada.
+
+    No hace db.add, ni db.commit, ni genera embedding: solo devuelve el JSON
+    estructurado para que el usuario lo revise/edite en el frontend y después
+    lo envíe a `crear_presupuesto_desde_estructura`.
+
+    Lanza ValueError si la estructura generada es aritméticamente incoherente.
+    """
+    titulo = solicitud.titulo
+    descripcion = solicitud.descripcion
+    materiales_por_cliente = bool(solicitud.materiales_por_cliente)
 
     # Determinar modalidad de trabajo
-    modalidad_trabajo = "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE" if materiales_por_cliente else "OBRA COMPLETA"
+    modalidad_trabajo = (
+        "SOLO MANO DE OBRA / MATERIALES APORTADOS POR CLIENTE"
+        if materiales_por_cliente
+        else "OBRA COMPLETA"
+    )
 
     # Generar la estructura con Groq y RAG
     rag_service = PresupuestoRAGService(db=db)
@@ -129,11 +182,45 @@ def crear_presupuesto_con_rag(
     # VALIDAR Y RECALCULAR todos los totales
     datos = validar_y_recalcular_presupuesto(datos)
 
+    # Homogeneizar claves antes de entregar el JSON al frontend
+    datos = normalizar_estructura(datos, titulo, descripcion)
+
+    return {
+        "presupuesto": datos,
+        "referencias_usadas": resultado_rag.get("cantidad_referencias", 0),
+        "similitud_promedio": resultado_rag.get("similitud_promedio", 0.0),
+        "contexto_usado": resultado_rag.get("contexto_usado", []),
+        "persistido": False,
+    }
+
+
+def crear_presupuesto_desde_estructura(db: Session, datos) -> Presupuestos:
+    """
+    Persiste una estructura completa (cabecera + capítulos + detalles).
+
+    Acepta un dict o un schema Pydantic. Recalcula los totales antes de guardar
+    (el usuario ha podido editar cantidades o precios) y genera el embedding
+    vectorial: la indexación RAG solo ocurre aquí, nunca al generar con IA.
+
+    Lanza ValueError si los totales son incoherentes.
+    Retorna el presupuesto creado con sus relaciones.
+    """
+    if hasattr(datos, "model_dump"):
+        datos = datos.model_dump()
+
+    embedding_service = EmbeddingService()
+
+    # Recalcular totales sobre los datos ya revisados por el usuario
+    datos = validar_y_recalcular_presupuesto(datos)
+    datos = normalizar_estructura(datos)
+
     # Guardar la cabecera del Presupuesto
     presupuesto = Presupuestos(
         codigo=f"PRES-{uuid.uuid4().hex[:8].upper()}",
-        titulo=datos.get("titulo", titulo),
-        descripcion=datos.get("descripcion", descripcion),
+        cliente_id=datos.get("cliente_id"),
+        titulo=datos.get("titulo"),
+        descripcion=datos.get("descripcion"),
+        estado=datos.get("estado") or "Borrador",
         subtotal=to_decimal(datos.get("subtotal")),
         iva=to_decimal(datos.get("iva"), 21.0),
         total=to_decimal(datos.get("total")),
@@ -150,14 +237,11 @@ def crear_presupuesto_con_rag(
 
     # Guardar los Capítulos y Detalles
     for idx, cap_data in enumerate(datos.get("capitulos", []), start=1):
-        nombre_capitulo = cap_data.get("nombre") or cap_data.get(
-            "titulo", f"Capítulo {idx}")
-
         capitulo = Capitulos(
             presupuesto_id=presupuesto.id,
-            numero=int(cap_data.get("numero", 1)),
-            nombre=nombre_capitulo,
-            orden=idx
+            numero=int(cap_data.get("numero", idx)),
+            nombre=cap_data.get("nombre"),
+            orden=int(cap_data.get("orden", idx))
         )
         db.add(capitulo)
         db.flush()
@@ -169,22 +253,18 @@ def crear_presupuesto_con_rag(
         for det_idx, det_data in enumerate(
             cap_data.get("detalles", []), start=1
         ):
-            texto_descripcion = det_data.get("descripcion") or det_data.get(
-                "concepto", ""
-            )
-
             detalle = Detalles(
                 capitulo_id=capitulo.id,
                 numero=int(det_data.get("numero", det_idx)),
-                descripcion=texto_descripcion,
+                descripcion=det_data.get("descripcion", ""),
                 unidad=det_data.get("unidad", "ud")[:20],
                 cantidad=to_decimal(det_data.get("cantidad"), 0.0),
                 precio_unitario=to_decimal(
                     det_data.get("precio_unitario"), 0.0),
                 subtotal=to_decimal(det_data.get("subtotal"), 0.0),
-                generado_por_ia=True,
-                precio_confirmado=False,
-                es_externo=False,
+                generado_por_ia=bool(det_data.get("generado_por_ia", False)),
+                precio_confirmado=bool(det_data.get("precio_confirmado", False)),
+                es_externo=bool(det_data.get("es_externo", False)),
             )
             db.add(detalle)
             texto_completo_para_rag += (
@@ -215,13 +295,42 @@ def crear_presupuesto_con_rag(
     db.commit()
     db.refresh(presupuesto)
 
+    return presupuesto
+
+
+def crear_presupuesto_con_rag(
+    db: Session,
+    titulo: str,
+    descripcion: str,
+    materiales_por_cliente: bool = False
+) -> dict:
+    """
+    DEPRECADO: genera y persiste en un solo paso (comportamiento anterior).
+
+    Se conserva por compatibilidad; el flujo actual usa
+    `generar_presupuesto_ia` + `crear_presupuesto_desde_estructura` para que la
+    IA asista sin decidir. Ya no lo usa ningún endpoint.
+    """
+    from ..schemas.presupuestos_ia import SolicitudIAPresupuesto
+
+    resultado = generar_presupuesto_ia(
+        db,
+        SolicitudIAPresupuesto(
+            titulo=titulo,
+            descripcion=descripcion,
+            materiales_por_cliente=materiales_por_cliente,
+        ),
+    )
+    presupuesto = crear_presupuesto_desde_estructura(
+        db, resultado["presupuesto"])
+
     return {
         "mensaje": "Presupuesto, capítulos y detalles creados con éxito",
         "presupuesto_id": presupuesto.id,
         "codigo": presupuesto.codigo,
         "total_capitulos_creados": len(presupuesto.capitulos),
-        "referencias_usadas": resultado_rag.get("cantidad_referencias", 0),
-        "similitud_promedio": resultado_rag.get("similitud_promedio", 0.0),
+        "referencias_usadas": resultado.get("referencias_usadas", 0),
+        "similitud_promedio": resultado.get("similitud_promedio", 0.0),
     }
 
 

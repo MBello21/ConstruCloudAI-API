@@ -55,13 +55,6 @@ class CapituloEstructura(BaseModel):
 
 
 class EstructuraPresupuesto(BaseModel):
-    """
-    Estructura completa de un presupuesto (cabecera + capítulos + detalles).
-
-    Es lo que devuelve `POST /ia-rag` (sin persistir) y lo que espera
-    `POST /` para persistir tras la revisión del usuario.
-    """
-
     titulo: str
     descripcion: Optional[str] = None
     cliente_id: Optional[int] = None

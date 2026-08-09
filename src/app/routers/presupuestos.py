@@ -2,10 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..schemas.presupuestos import PresupuestoCompletoResponse, PresupuestoCreadoResponse, ActualizarPresupuesto
-from ..schemas.presupuestos_ia import SolicitudIAPresupuesto
+from ..schemas.presupuestos import PresupuestoCompletoResponse, ActualizarPresupuesto
+from ..schemas.presupuestos_ia import (
+    SolicitudIAPresupuesto,
+    EstructuraPresupuesto,
+    PresupuestoGeneradoResponse,
+)
 from ..services.presupuesto_service import (
-    crear_presupuesto_con_rag,
+    generar_presupuesto_ia,
+    crear_presupuesto_desde_estructura,
     get_metricas,
     get_presupuesto_by_id,
     listar_presupuestos,
@@ -17,24 +22,51 @@ from ..services.presupuesto_service import (
 router = APIRouter()
 
 
-@router.post("/ia-rag")
-async def crear_presupuesto(
+@router.post("/ia-rag", response_model=PresupuestoGeneradoResponse)
+async def generar_presupuesto_ia_endpoint(
     solicitud: SolicitudIAPresupuesto, db: Session = Depends(get_db)
 ):
+    """
+    Genera una propuesta de presupuesto con IA + RAG. NO persiste nada.
+
+    El frontend revisa/edita el JSON devuelto y lo envía a `POST /presupuestos/`
+    para guardarlo.
+    """
     try:
-        datos_respuesta = crear_presupuesto_con_rag(
-            db=db,
-            titulo=solicitud.titulo,
-            descripcion=solicitud.descripcion,
-            materiales_por_cliente=solicitud.materiales_por_cliente
-        )
-        return PresupuestoCreadoResponse.model_validate(datos_respuesta)
+        datos_respuesta = generar_presupuesto_ia(db=db, solicitud=solicitud)
+        return PresupuestoGeneradoResponse.model_validate(datos_respuesta)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error en la coherencia del presupuesto generado: {str(e)}. "
             f"La IA generó datos con inconsistencias aritméticas. "
             f"Por favor, intenta de nuevo con una descripción más detallada."
+        )
+    except Exception as e:
+        print(f"❌ Error generando presupuesto con IA: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error generando presupuesto con IA: {str(e)}",
+        )
+
+
+@router.post(
+    "",
+    response_model=PresupuestoCompletoResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def crear_presupuesto(
+    estructura: EstructuraPresupuesto, db: Session = Depends(get_db)
+):
+    try:
+        presupuesto = crear_presupuesto_desde_estructura(
+            db=db, datos=estructura)
+        return PresupuestoCompletoResponse.model_validate(presupuesto)
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error en la coherencia del presupuesto: {str(e)}",
         )
     except Exception as e:
         db.rollback()

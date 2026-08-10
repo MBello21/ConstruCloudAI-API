@@ -120,7 +120,8 @@ def normalizar_estructura(datos: dict, titulo: str = "", descripcion: str = "") 
     capitulos = []
     for idx, cap_data in enumerate(datos.get("capitulos", []) or [], start=1):
         cap_data["nombre"] = (
-            cap_data.get("nombre") or cap_data.get("titulo") or f"Capítulo {idx}"
+            cap_data.get("nombre") or cap_data.get(
+                "titulo") or f"Capítulo {idx}"
         )
         cap_data.pop("titulo", None)
         cap_data["numero"] = int(cap_data.get("numero") or idx)
@@ -263,7 +264,8 @@ def crear_presupuesto_desde_estructura(db: Session, datos) -> Presupuestos:
                     det_data.get("precio_unitario"), 0.0),
                 subtotal=to_decimal(det_data.get("subtotal"), 0.0),
                 generado_por_ia=bool(det_data.get("generado_por_ia", False)),
-                precio_confirmado=bool(det_data.get("precio_confirmado", False)),
+                precio_confirmado=bool(
+                    det_data.get("precio_confirmado", False)),
                 es_externo=bool(det_data.get("es_externo", False)),
             )
             db.add(detalle)
@@ -452,6 +454,12 @@ def actualizar_presupuesto(
         presupuesto.condiciones_pago = datos.condiciones_pago
     if datos.iva is not None:
         presupuesto.iva = datos.iva
+        presupuesto.total = float(
+            redondear_decimal(
+                to_decimal(presupuesto.subtotal) *
+                (1 + to_decimal(datos.iva) / 100)
+            )
+        )
 
     db.commit()
     db.refresh(presupuesto)

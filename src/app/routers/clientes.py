@@ -9,6 +9,7 @@ from ..services.cliente_service import (
     create_cliente,
     update_cliente,
     delete_cliente,
+    get_clientes_listados
 )
 
 router = APIRouter()
@@ -35,6 +36,16 @@ def listar_clientes_endpoint(
 ):
     clientes = get_clientes(db, skip, limit)
     return [ClienteResponse.model_validate(cliente) for cliente in clientes]
+
+
+@router.get("/listado")
+def listar_clientes_total(
+    skip: int = 0,
+        limit: int = 10,
+        db: Session = Depends(get_db),
+        estado: str = None
+):
+    return get_clientes_listados(db, skip, limit, estado)
 
 
 @router.get("/{cliente_id}")

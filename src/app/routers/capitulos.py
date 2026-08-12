@@ -24,7 +24,8 @@ def listar_capitulos(skip: int = 0, limit: int = 10, db: Session = Depends(get_d
 def obtener_capitulo(capitulo_id: int, db: Session = Depends(get_db)):
     capitulo = capitulo_service.get_capitulo_by_id(db, capitulo_id)
     if not capitulo:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Capitulo no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Capitulo no encontrado")
     return capitulo
 
 
@@ -32,7 +33,8 @@ def obtener_capitulo(capitulo_id: int, db: Session = Depends(get_db)):
 def actualizar_capitulo(capitulo_id: int, datos: CapituloUpdate, db: Session = Depends(get_db)):
     capitulo = capitulo_service.update_capitulo(db, capitulo_id, datos)
     if not capitulo:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Capitulo no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Capitulo no encontrado")
     return capitulo
 
 
@@ -40,5 +42,6 @@ def actualizar_capitulo(capitulo_id: int, datos: CapituloUpdate, db: Session = D
 def eliminar_capitulo(capitulo_id: int, db: Session = Depends(get_db)):
     eliminado = capitulo_service.delete_capitulo(db, capitulo_id)
     if not eliminado:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Capitulo no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Capitulo no encontrado")
     return {"eliminado": True}

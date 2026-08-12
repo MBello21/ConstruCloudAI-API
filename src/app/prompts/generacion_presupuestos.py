@@ -113,21 +113,65 @@ MODALIDAD DE TRABAJO: {modalidad_trabajo}
       Obra nueva → 02, 04, 05, 07, 08, 09, 10, 11, 12, 13, 14, 18, 19, 20, 21, 22, 23, 24, 26, 27, 30, 32
       Nave industrial → 02, 03, 04, 05, 06, 07, 09, 12, 16, 25, 32
 
+8️⃣ DESCRIPCIONES TÉCNICAS - NIVEL PROFESIONAL OBLIGATORIO:
+
+   El campo "concepto" es un resumen corto (1 línea). TODO el detalle técnico va en el campo
+   "descripcion", que debe incluir, cuando aplique:
+
+   a) MATERIAL PRINCIPAL: tipo, calidad, formato/dimensiones.
+      ❌ "Solado porcelánico"
+      ✅ "Solado con baldosa porcelánica rectificada 60×60 cm, acabado mate antideslizante clase 2 (Rd>35), color a elegir por D.F."
+
+   b) MATERIAL DE AGARRE/SOPORTE: tipo de mortero, cemento cola, imprimación.
+      ✅ "Recibido con cemento cola flexible C2 TE-S1 sobre superficie regularizada"
+
+   c) ACABADO/REJUNTADO: cuando aplique.
+      ✅ "Rejuntado con mortero de juntas CG2 WA color a elegir, junta de 2mm"
+
+   d) TRABAJOS INCLUIDOS: preparación, cortes, merma, limpieza.
+      ❌ "Alicatado paredes"
+      ✅ "Alicatado con azulejo porcelánico rectificado 30×60 cm en paredes, incluyendo replanteo, cortes, piezas especiales, cantoneras de aluminio en esquinas vistas, merma del 5%, y limpieza final"
+
+   e) NORMATIVA/REFERENCIA cuando aplique:
+      - Instalaciones: referencia al REBT, CTE DB-HS, CTE DB-HE.
+      - Sanitarios/equipamiento: marca o gama de referencia ("gama media-alta tipo Roca, Duravit o similar").
+      - Impermeabilización: tipo de lámina, solape, normativa.
+
+   f) JUSTIFICACIÓN DE MEDICIONES dentro de "descripcion":
+      ❌ "22 m²"
+      ✅ "Medición: perímetro 10 m × altura 2,40 m = 24 m², descontando hueco puerta 0,80×2,10 m ≈ 22 m²"
+
 ═══════════════════════════════════════════════════════════════════════════════════
 EJEMPLO NARRATIVO - REFORMA BAÑO 6m² (2m × 3m) - OBRA COMPLETA
 ═══════════════════════════════════════════════════════════════════════════════════
 
 8 capítulos correctos:
-Cap 1 TRABAJOS PREVIOS Y DEMOLICIONES (620€): demolición alicatado paredes 22m²×14€=308€,
-  demolición solado 6m²×14€=84€, desmontaje sanitarios 1ud×180€=180€, desmontaje falso techo 6m²×8€=48€.
+Cap 1 TRABAJOS PREVIOS Y DEMOLICIONES (620€):
+  - demolición alicatado paredes 22m²×14€=308€. descripcion: "Demolición de alicatado cerámico en
+    paredes mediante medios manuales, incluyendo picado hasta soporte, retirada de escombros a
+    contenedor y limpieza del paramento para recibir nuevo revestimiento. Medición: perímetro 10 m ×
+    2,40 m = 24 m², descontando hueco puerta ≈ 22 m²"
+  - demolición solado 6m²×14€=84€, desmontaje sanitarios 1ud×180€=180€, desmontaje falso techo 6m²×8€=48€.
 Cap 2 FONTANERÍA Y ACS (470€): adaptación tomas agua 1ud×350€, desagüe ducha 1ud×120€.
 Cap 3 INSTALACIÓN ELÉCTRICA (420€): adecuación eléctrica REBT 1ud×420€.
-Cap 4 SOLADOS Y PAVIMENTOS (372€): solado porcelánico antideslizante 6m²×42€=252€, rodapié 10m×12€=120€.
+Cap 4 SOLADOS Y PAVIMENTOS (372€):
+  - solado porcelánico antideslizante 6m²×42€=252€. concepto: "Solado porcelánico rectificado 60×60
+    cm antideslizante". descripcion: "Suministro y colocación de pavimento porcelánico rectificado
+    60×60 cm, acabado mate antideslizante clase 2, recibido con cemento cola flexible C2 TE sobre
+    solera regularizada, rejuntado con mortero CG2 color a elegir, junta de 2 mm. Incluye replanteo,
+    cortes, merma 5% y limpieza. Superficie: 2×3 m = 6 m²"
+  - rodapié 10m×12€=120€.
 Cap 5 ALICATADOS Y CHAPADOS (990€): alicatado porcelánico paredes 22m²×45€=990€.
 Cap 6 FALSOS TECHOS (210€): pladur hidrófugo 6m²×35€=210€.
 Cap 7 PINTURA Y ACABADOS (54€): pintura antihumedad techo 6m²×9€=54€.
-Cap 8 APARATOS SANITARIOS (1900€): plato ducha resina 1ud×420€, mampara vidrio 8mm 1ud×380€,
-  inodoro cisterna doble descarga 1ud×650€, lavabo sobre mueble 60cm con grifo 1ud×450€.
+Cap 8 APARATOS SANITARIOS (1900€):
+  - plato ducha resina 1ud×420€. descripcion: "Suministro e instalación de plato de ducha de resina
+    mineral con carga de cuarzo, extraplano (3 cm), dimensiones 80×120 cm, acabado texturizado
+    antideslizante, color blanco. Incluye válvula de desagüe sifónica, conexión a bajante, sellado
+    perimetral con silicona neutra fungicida y fijación según instrucciones del fabricante.
+    Referencia gama media-alta tipo Roca, Acquabella o similar"
+  - mampara vidrio 8mm 1ud×380€, inodoro cisterna doble descarga 1ud×650€, lavabo sobre mueble 60cm
+    con grifo 1ud×450€.
 Subtotal: 5036€ | IVA 21%: 1057.56€ | Total: 6093.56€
 
 RESPONDE SOLO CON JSON VÁLIDO, esta estructura exacta:
@@ -169,4 +213,7 @@ CHECKPOINT FINAL:
 ✓ "Suministro e instalación de..." en sanitarios/equipamiento
 ✓ Precios dentro de máximos | Aritmética exacta 2 decimales
 ✓ subtotal × 1.21 = total | Valores REALES, no 0.0
+✓ Descripciones técnicas completas (material + agarre + acabado + trabajos incluidos)
+✓ Marcas de referencia en sanitarios y equipamiento ("tipo Roca o similar")
+✓ Justificación de mediciones en descripciones
 """

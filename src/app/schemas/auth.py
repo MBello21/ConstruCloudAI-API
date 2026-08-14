@@ -19,11 +19,7 @@ class TokenResponse(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
-    """Datos de empresa editables por el usuario autenticado.
-
-    Todos los campos son opcionales: el frontend envía solo los que cambian.
-    Email y password no se pueden actualizar por aquí.
-    """
+ 
     razon_social: Optional[str] = Field(default=None, max_length=255)
     direccion_fiscal: Optional[str] = Field(default=None, max_length=255)
     documento: Optional[str] = Field(default=None, max_length=20)
@@ -34,11 +30,7 @@ class UpdateUserRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Datos del usuario autenticado. Nunca incluye password_hash.
 
-    Los campos de empresa son opcionales: quedan a null tras el signup
-    y se completan más adelante desde la app.
-    """
     id: int
     email: EmailStr
     razon_social: Optional[str] = None

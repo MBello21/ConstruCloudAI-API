@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..schemas.clientes import ClienteCreate, ClienteResponse
+from ..schemas.clientes import ClienteCreate, ClienteResponse, ClienteUpdate
 from ..services.cliente_service import (
     get_clientes,
     get_cliente_by_id,
@@ -77,7 +77,7 @@ def eliminar_cliente_endpoint(
 
 
 @router.put("/{cliente_id}")
-def actualizar_cliente_endpoint(cliente_id: int, cliente_data: ClienteCreate, db: Session = Depends(get_db)):
+def actualizar_cliente_endpoint(cliente_id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db)):
     cliente = update_cliente(db, cliente_id, cliente_data)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")

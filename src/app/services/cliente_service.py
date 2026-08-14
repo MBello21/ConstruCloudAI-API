@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from ..models.clientes import Clientes
-from ..schemas.clientes import ClienteCreate
+from ..schemas.clientes import ClienteCreate, ClienteUpdate
 
 
 def get_clientes(
@@ -65,7 +65,7 @@ def create_cliente(db: Session, data: ClienteCreate) -> Clientes:
 def update_cliente(
     db: Session,
     cliente_id: int,
-    data: ClienteCreate
+    data: ClienteUpdate
 ) -> Optional[Clientes]:
     """Actualiza un cliente. Retorna None si no existe."""
     cliente = get_cliente_by_id(db, cliente_id)

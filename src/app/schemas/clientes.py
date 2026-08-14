@@ -38,3 +38,15 @@ class ClienteCreate(BaseModel):
     tipo: Optional[str] = "Empresa"
     cif: Optional[str] = None
     notas: Optional[str] = None
+
+
+class ClienteUpdate(BaseModel):
+    nombre_cliente: Optional[str] = None
+    direccion: Optional[str] = None
+    poblacion: Optional[str] = None
+    telefono: Optional[str] = None
+    email: Optional[str] = None
+    estado: Optional[str] = None
+    tipo: Optional[str] = None
+    cif: Optional[str] = None
+    notas: Optional[str] = None

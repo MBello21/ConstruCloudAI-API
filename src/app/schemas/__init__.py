@@ -1,6 +1,6 @@
 from .auth import LoginRequest, SignupRequest, TokenResponse
 from .user import UserCreate, UserResponse
-from .clientes import ClienteCreate, ClienteResponse
+from .clientes import ClienteCreate, ClienteResponse, ClienteUpdate
 from .presupuestos import PresupuestoCompletoResponse, PresupuestoCreadoResponse
 from .presupuestos_ia import (
     SolicitudIAPresupuesto,

@@ -89,6 +89,36 @@ def registrar_usuario(
     return nuevo_usuario
 
 
+def registrar_usuario_empresa(
+    db: Session,
+    email: str,
+    password: str,
+    nombre_completo: Optional[str],
+    empresa_id: int,
+    rol: str,
+) -> Users:
+    """Registra un usuario nuevo dentro de una empresa ya existente.
+
+    Lanza ValueError si el email ya está registrado.
+    """
+    if get_user_by_email(db, email):
+        raise ValueError("El email ya está registrado")
+
+    nuevo_usuario = Users(
+        email=email,
+        password_hash=hashear_password(password),
+        nombre_completo=nombre_completo,
+        rol=rol,
+        empresa_id=empresa_id,
+        is_active=True,
+    )
+
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+    return nuevo_usuario
+
+
 def autenticar_usuario(
     db: Session,
     email: str,

@@ -24,6 +24,17 @@ class UpdateUserRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class CreateUserEmpresaRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    nombre_completo: str | None = None
+    rol: str = Field(default="usuario", pattern="^(admin|gestor|usuario)$")
+
+
+class UpdateUserRolRequest(BaseModel):
+    rol: str = Field(pattern="^(admin|gestor|usuario)$")
+
+
 class UserResponse(BaseModel):
     id: int
     email: EmailStr

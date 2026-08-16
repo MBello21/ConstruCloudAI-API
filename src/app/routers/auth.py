@@ -28,10 +28,12 @@ router = APIRouter()
 )
 def signup_endpoint(datos: SignupRequest, db: Session = Depends(get_db)):
     try:
-        user = registrar_usuario(db, datos.email, datos.password)
+        user = registrar_usuario(
+            db, datos.email, datos.password, datos.nombre_completo
+        )
     except ValueError as error:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         )
 

@@ -5,12 +5,14 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .presupuestos import Presupuestos
+    from .empresa import Empresa
 
 
 class Clientes(Base):
     __tablename__ = 'clientes'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    codigo: Mapped[str] = mapped_column(String(50), unique=True, nullable=True)
     nombre_cliente: Mapped[str] = mapped_column(Text, nullable=False)
     direccion: Mapped[str] = mapped_column(Text, nullable=True)
     poblacion: Mapped[str] = mapped_column(String(400), nullable=False)
@@ -24,3 +26,7 @@ class Clientes(Base):
     notas: Mapped[str] = mapped_column(Text, nullable=True)
     presupuestos: Mapped[list["Presupuestos"]] = relationship(
         "Presupuestos", back_populates="cliente")
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresa.id"), nullable=True)
+    empresa: Mapped["Empresa"] = relationship(
+        "Empresa", back_populates="clientes")

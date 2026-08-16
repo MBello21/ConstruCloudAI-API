@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .capitulos import Capitulos
     from .presupuesto_embedding import PresupuestoEmbedding
     from .clientes import Clientes
+    from .empresa import Empresa
 
 
 class EstadoPresupuesto(str, enum.Enum):
@@ -23,6 +24,10 @@ class Presupuestos(Base):
     __tablename__ = 'presupuestos'
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    empresa_id: Mapped[int] = mapped_column(
+        ForeignKey("empresa.id"), nullable=True)
+    empresa: Mapped["Empresa"] = relationship(
+        "Empresa", back_populates="presupuestos")
     cliente_id: Mapped[int] = mapped_column(
         ForeignKey('clientes.id'), nullable=True)
     cliente: Mapped["Clientes"] = relationship(

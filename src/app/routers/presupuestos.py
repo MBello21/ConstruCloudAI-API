@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..models.user import Users
 from ..schemas.presupuestos import PresupuestoCompletoResponse, ActualizarPresupuesto
 from ..schemas.presupuestos_ia import (
     SolicitudIAPresupuesto,
     EstructuraPresupuesto,
     PresupuestoGeneradoResponse,
 )
+from ..services.auth_service import get_current_user
 from ..services.presupuesto_service import (
     generar_presupuesto_ia,
     crear_presupuesto_desde_estructura,
@@ -24,7 +26,9 @@ router = APIRouter()
 
 @router.post("/ia-rag", response_model=PresupuestoGeneradoResponse)
 async def generar_presupuesto_ia_endpoint(
-    solicitud: SolicitudIAPresupuesto, db: Session = Depends(get_db)
+    solicitud: SolicitudIAPresupuesto,
+    usuario: Users = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Genera una propuesta de presupuesto con IA + RAG. NO persiste nada.
@@ -33,7 +37,9 @@ async def generar_presupuesto_ia_endpoint(
     para guardarlo.
     """
     try:
-        datos_respuesta = generar_presupuesto_ia(db=db, solicitud=solicitud)
+        datos_respuesta = generar_presupuesto_ia(
+            db=db, solicitud=solicitud, empresa_id=usuario.empresa_id
+        )
         return PresupuestoGeneradoResponse.model_validate(datos_respuesta)
     except ValueError as e:
         raise HTTPException(
@@ -56,11 +62,13 @@ async def generar_presupuesto_ia_endpoint(
     status_code=status.HTTP_201_CREATED,
 )
 async def crear_presupuesto(
-    estructura: EstructuraPresupuesto, db: Session = Depends(get_db)
+    estructura: EstructuraPresupuesto,
+    usuario: Users = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     try:
         presupuesto = crear_presupuesto_desde_estructura(
-            db=db, datos=estructura)
+            db=db, datos=estructura, empresa_id=usuario.empresa_id)
         return PresupuestoCompletoResponse.model_validate(presupuesto)
     except ValueError as e:
         db.rollback()
@@ -78,17 +86,22 @@ async def crear_presupuesto(
 
 
 @router.get('/metricas')
-async def get_metricas_endpoint(db: Session = Depends(get_db)):
-    return get_metricas(db)
+async def get_metricas_endpoint(
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(get_current_user)
+):
+    return get_metricas(db, current_user.empresa_id)
 
 
 @router.get('/{presupuesto_id}')
 def obtener_presupuesto(
     presupuesto_id: int,
+    usuario: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        presupuesto = get_presupuesto_by_id(db, presupuesto_id)
+        presupuesto = get_presupuesto_by_id(
+            db, presupuesto_id, usuario.empresa_id)
         return PresupuestoCompletoResponse.model_validate(presupuesto)
     except Exception as e:
         raise HTTPException(
@@ -102,19 +115,22 @@ async def listar_presupuestos_endpoint(
     skip: int = 0,
     limit: int = 10,
     estado: str = None,
+    usuario: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return listar_presupuestos(db, skip, limit, estado)
+    return listar_presupuestos(db, skip, limit, estado, usuario.empresa_id)
 
 
 @router.put('/{presupuesto_id}')
 async def actualizar_presupuesto_endpoint(
     presupuesto_id: int,
     datos: ActualizarPresupuesto,
+    usuario: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        return actualizar_presupuesto(db, presupuesto_id, datos)
+        return actualizar_presupuesto(
+            db, presupuesto_id, datos, usuario.empresa_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -125,10 +141,11 @@ async def actualizar_presupuesto_endpoint(
 @router.delete('/{presupuesto_id}')
 async def eliminar_presupuesto_endpoint(
     presupuesto_id: int,
+    usuario: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     try:
-        return eliminar_presupuesto(db, presupuesto_id)
+        return eliminar_presupuesto(db, presupuesto_id, usuario.empresa_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -14,6 +14,7 @@ class PresupuestoResumen(BaseModel):
 
 class ClienteResponse(BaseModel):
     id: int
+    codigo: str | None = None
     nombre_cliente: str
     direccion: Optional[str] = None
     poblacion: str

@@ -1,39 +1,53 @@
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, subqueryload
+import uuid
 
 from ..models.clientes import Clientes
 from ..schemas.clientes import ClienteCreate, ClienteUpdate
 
 
+def _filtrar_por_empresa(query, empresa_id: Optional[int]):
+    """Restringe la query a la empresa indicada (o a los registros sin empresa)."""
+    if empresa_id is None:
+        return query.filter(Clientes.empresa_id.is_(None))
+    return query.filter(Clientes.empresa_id == empresa_id)
+
+
 def get_clientes(
     db: Session,
     skip: int = 0,
-    limit: int = 10
+    limit: int = 10,
+    empresa_id: Optional[int] = None
 ) -> List[Clientes]:
-    """Lista clientes con paginación."""
-    return db.query(Clientes).offset(skip).limit(limit).all()
+    query = _filtrar_por_empresa(db.query(Clientes), empresa_id)
+    query = query.options(subqueryload(Clientes.presupuestos))
+    return query.offset(skip).limit(limit).all()
 
 
 def get_clientes_listados(
     db: Session,
     skip: int = 0,
     limit: int = 10,
-    estado: str = None
+    estado: str = None,
+    empresa_id: Optional[int] = None
 ) -> List[Clientes]:
-    """Lista clientes con paginación."""
-    query = db.query(Clientes)
+    """Lista clientes de la empresa con paginación."""
+    query = _filtrar_por_empresa(db.query(Clientes), empresa_id)
 
     if estado and estado != 'Todos':
         query = query.filter(Clientes.estado == estado)
 
     total = query.count()
-    clientes = query.order_by(Clientes.id.desc()).offset(
-        skip).limit(limit).all()
+    clientes = query.order_by(Clientes.id.desc()).options(
+        subqueryload(Clientes.presupuestos)
+    ).offset(skip).limit(limit).all()
 
     return {
         "total": total,
         "clientes": [{
             "id": c.id,
+            "codigo": c.codigo,
             "nombre_cliente": c.nombre_cliente,
             "telefono": c.telefono,
             "email": c.email,
@@ -42,20 +56,30 @@ def get_clientes_listados(
             "estado": c.estado,
             "tipo": c.tipo,
             "cif": c.cif,
-        }
-            for c in clientes
-        ]
+            "num_presupuestos": len(c.presupuestos),
+            "volumen": float(sum(p.total for p in c.presupuestos)),
+        } for c in clientes]
     }
 
 
-def get_cliente_by_id(db: Session, cliente_id: int) -> Optional[Clientes]:
-    """Obtiene un cliente por ID. Retorna None si no existe."""
-    return db.query(Clientes).filter(Clientes.id == cliente_id).first()
+def get_cliente_by_id(
+    db: Session,
+    cliente_id: int,
+    empresa_id: Optional[int] = None
+) -> Optional[Clientes]:
+    """Obtiene un cliente por ID dentro de la empresa. Retorna None si no existe o pertenece a otra empresa."""
+    query = _filtrar_por_empresa(db.query(Clientes), empresa_id)
+    return query.filter(Clientes.id == cliente_id).first()
 
 
-def create_cliente(db: Session, data: ClienteCreate) -> Clientes:
-    """Crea un nuevo cliente."""
-    cliente = Clientes(**data.model_dump())
+def create_cliente(
+    db: Session,
+    data: ClienteCreate,
+    empresa_id: Optional[int] = None
+) -> Clientes:
+    codigo = f"CLI-{uuid.uuid4().hex[:6].upper()}"
+    cliente = Clientes(**data.model_dump(), codigo=codigo,
+                       empresa_id=empresa_id)
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
@@ -65,10 +89,11 @@ def create_cliente(db: Session, data: ClienteCreate) -> Clientes:
 def update_cliente(
     db: Session,
     cliente_id: int,
-    data: ClienteUpdate
+    data: ClienteUpdate,
+    empresa_id: Optional[int] = None
 ) -> Optional[Clientes]:
-    """Actualiza un cliente. Retorna None si no existe."""
-    cliente = get_cliente_by_id(db, cliente_id)
+    """Actualiza un cliente de la empresa. Retorna None si no existe o pertenece a otra empresa."""
+    cliente = get_cliente_by_id(db, cliente_id, empresa_id)
 
     if not cliente:
         return None
@@ -82,9 +107,13 @@ def update_cliente(
     return cliente
 
 
-def delete_cliente(db: Session, cliente_id: int) -> bool:
-    """Elimina un cliente. Retorna True si se eliminó."""
-    cliente = get_cliente_by_id(db, cliente_id)
+def delete_cliente(
+    db: Session,
+    cliente_id: int,
+    empresa_id: Optional[int] = None
+) -> bool:
+    """Elimina un cliente de la empresa. Retorna True si se eliminó."""
+    cliente = get_cliente_by_id(db, cliente_id, empresa_id)
 
     if not cliente:
         return False

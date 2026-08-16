@@ -6,6 +6,7 @@ from .routers.presupuestos import router as presupuestos_router
 from .routers.clientes import router as clientes_router
 from .routers.capitulos import router as capitulos_router
 from .routers.detalles import router as detalles_router
+from .routers.empresa import router as empresa_router
 from .services.auth_service import get_current_user
 
 
@@ -30,4 +31,7 @@ api_router.include_router(
     dependencies=protegido)
 api_router.include_router(
     detalles_router, prefix="/detalles", tags=["Detalles"],
+    dependencies=protegido)
+api_router.include_router(
+    empresa_router, prefix="/empresa", tags=["Empresa"],
     dependencies=protegido)

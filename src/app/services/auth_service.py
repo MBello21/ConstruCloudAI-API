@@ -9,6 +9,7 @@ from jwt import PyJWTError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..models.empresa import Empresa
 from ..models.user import Users
 from .user_service import (
     get_user_by_email,
@@ -52,20 +53,34 @@ def hashear_password(password_plano: str) -> str:
     return hash_password(password_plano)
 
 
-def registrar_usuario(db: Session, email: str, password: str) -> Users:
-    """Registra un usuario nuevo con email y contraseña.
+def registrar_usuario(
+    db: Session,
+    email: str,
+    password: str,
+    nombre_completo: Optional[str] = None,
+) -> Users:
+    """Registra una empresa nueva junto con su usuario administrador.
 
-    El resto de campos (razón social, documento, teléfono...) quedan a null
-    y se completan más adelante desde la app.
+    Crea la Empresa y el Users admin en una sola transacción (mismo commit):
+    el resto de campos de la empresa quedan a null y se completan más
+    adelante desde la app.
 
     Lanza ValueError si el email ya está registrado.
     """
     if get_user_by_email(db, email):
         raise ValueError("El email ya está registrado")
 
+    nueva_empresa = Empresa(email=email)
+    db.add(nueva_empresa)
+    db.flush()
+
     nuevo_usuario = Users(
         email=email,
         password_hash=hashear_password(password),
+        nombre_completo=nombre_completo,
+        rol="admin",
+        empresa_id=nueva_empresa.id,
+        is_active=True,
     )
 
     db.add(nuevo_usuario)

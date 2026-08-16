@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
+from typing import Optional
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,6 +13,13 @@ from ..models.presupuesto_embedding import PresupuestoEmbedding
 from ..schemas.presupuestos import ActualizarPresupuesto
 from .embedding_service import EmbeddingService
 from .presupuesto_rag_service import PresupuestoRAGService
+
+
+def _filtrar_por_empresa(query, empresa_id: Optional[int]):
+    """Restringe la query a la empresa indicada (o a los registros sin empresa)."""
+    if empresa_id is None:
+        return query.filter(Presupuestos.empresa_id.is_(None))
+    return query.filter(Presupuestos.empresa_id == empresa_id)
 
 
 def to_decimal(val, default=0.0):
@@ -148,13 +156,18 @@ def normalizar_estructura(datos: dict, titulo: str = "", descripcion: str = "") 
     return datos
 
 
-def generar_presupuesto_ia(db: Session, solicitud) -> dict:
+def generar_presupuesto_ia(
+    db: Session, solicitud, empresa_id: Optional[int] = None
+) -> dict:
     """
     Genera con IA + RAG la estructura de un presupuesto SIN persistir nada.
 
     No hace db.add, ni db.commit, ni genera embedding: solo devuelve el JSON
     estructurado para que el usuario lo revise/edite en el frontend y después
     lo envíe a `crear_presupuesto_desde_estructura`.
+
+    El contexto RAG (presupuestos similares usados como referencia) se
+    restringe a la empresa del usuario.
 
     Lanza ValueError si la estructura generada es aritméticamente incoherente.
     """
@@ -175,7 +188,8 @@ def generar_presupuesto_ia(db: Session, solicitud) -> dict:
         descripcion=descripcion,
         titulo=titulo,
         modalidad_trabajo=modalidad_trabajo,
-        materiales_por_cliente=materiales_por_cliente
+        materiales_por_cliente=materiales_por_cliente,
+        empresa_id=empresa_id,
     )
 
     datos = resultado_rag["presupuesto_estructurado"]
@@ -195,7 +209,9 @@ def generar_presupuesto_ia(db: Session, solicitud) -> dict:
     }
 
 
-def crear_presupuesto_desde_estructura(db: Session, datos) -> Presupuestos:
+def crear_presupuesto_desde_estructura(
+    db: Session, datos, empresa_id: Optional[int] = None
+) -> Presupuestos:
     """
     Persiste una estructura completa (cabecera + capítulos + detalles).
 
@@ -218,6 +234,7 @@ def crear_presupuesto_desde_estructura(db: Session, datos) -> Presupuestos:
     # Guardar la cabecera del Presupuesto
     presupuesto = Presupuestos(
         codigo=f"PRES-{uuid.uuid4().hex[:8].upper()}",
+        empresa_id=empresa_id,
         cliente_id=datos.get("cliente_id"),
         titulo=datos.get("titulo"),
         descripcion=datos.get("descripcion"),
@@ -336,37 +353,44 @@ def crear_presupuesto_con_rag(
     }
 
 
-def get_metricas(db: Session) -> dict:
-    """Obtiene métricas de presupuestos."""
-    total = db.query(Presupuestos).count()
-    aprobados = db.query(Presupuestos).filter(
+def _base_query(db: Session, empresa_id: int | None = None):
+    q = db.query(Presupuestos)
+    if empresa_id is not None:
+        q = q.filter(Presupuestos.empresa_id == empresa_id)
+    return q
+
+
+def get_metricas(db: Session, empresa_id: int | None = None) -> dict:
+    """Obtiene métricas de presupuestos filtradas por empresa."""
+    total = _base_query(db, empresa_id).count()
+    aprobados = _base_query(db, empresa_id).filter(
         Presupuestos.estado == 'ACEPTADO').count()
-    pendientes = db.query(Presupuestos).filter(
+    pendientes = _base_query(db, empresa_id).filter(
         Presupuestos.estado.notin_(['Aprobado', 'Rechazado'])
     ).count()
-    importe_total = db.query(func.sum(Presupuestos.total)).scalar() or 0
+    importe_total = _base_query(db, empresa_id).with_entities(
+        func.sum(Presupuestos.total)).scalar() or 0
 
     hoy = datetime.now()
     inicio_mes_actual = hoy.replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)
     inicio_mes_anterior = inicio_mes_actual - relativedelta(months=1)
-    fin_mes_anterior = inicio_mes_actual - relativedelta(seconds=1)
 
-    total_mes_anterior = db.query(Presupuestos).filter(
+    filtro_mes = [
         Presupuestos.created_at >= inicio_mes_anterior,
         Presupuestos.created_at < inicio_mes_actual
-    ).count()
+    ]
 
-    aprobados_mes_anterior = db.query(Presupuestos).filter(
+    total_mes_anterior = _base_query(db, empresa_id).filter(
+        *filtro_mes).count()
+
+    aprobados_mes_anterior = _base_query(db, empresa_id).filter(
         Presupuestos.estado == 'ACEPTADO',
-        Presupuestos.created_at >= inicio_mes_anterior,
-        Presupuestos.created_at < inicio_mes_actual
-    ).count()
+        *filtro_mes).count()
 
-    importe_mes_anterior = db.query(func.sum(Presupuestos.total)).filter(
-        Presupuestos.created_at >= inicio_mes_anterior,
-        Presupuestos.created_at < inicio_mes_actual
-    ).scalar() or 0
+    importe_mes_anterior = _base_query(db, empresa_id).with_entities(
+        func.sum(Presupuestos.total)).filter(
+        *filtro_mes).scalar() or 0
 
     variacion_total = total - total_mes_anterior
     variacion_aprobados = aprobados - aprobados_mes_anterior
@@ -376,7 +400,7 @@ def get_metricas(db: Session) -> dict:
         "total": total,
         "aprobados": aprobados,
         "pendientes": pendientes,
-        "tasa_aprobacion": round(aprobados/total * 100, 1) if total > 0 else 0,
+        "tasa_aprobacion": round(aprobados / total * 100, 1) if total > 0 else 0,
         "importe_total": float(importe_total),
         "variacion_total": variacion_total,
         "variacion_aprobados": variacion_aprobados,
@@ -384,11 +408,13 @@ def get_metricas(db: Session) -> dict:
     }
 
 
-def get_presupuesto_by_id(db: Session, presupuesto_id: int):
-    """Obtiene un presupuesto por ID. Lanza Exception si no existe."""
-    presupuesto = db.query(Presupuestos).filter(
-        Presupuestos.id == presupuesto_id
-    ).first()
+def get_presupuesto_by_id(
+    db: Session, presupuesto_id: int, empresa_id: Optional[int] = None
+):
+    """Obtiene un presupuesto por ID dentro de la empresa. Lanza Exception si no existe."""
+    presupuesto = _filtrar_por_empresa(
+        db.query(Presupuestos), empresa_id
+    ).filter(Presupuestos.id == presupuesto_id).first()
 
     if not presupuesto:
         raise Exception("Presupuesto no encontrado")
@@ -400,10 +426,11 @@ def listar_presupuestos(
     db: Session,
     skip: int = 0,
     limit: int = 10,
-    estado: str = None
+    estado: str = None,
+    empresa_id: Optional[int] = None
 ) -> dict:
-    """Lista presupuestos con filtros opcionales."""
-    query = db.query(Presupuestos)
+    """Lista presupuestos de la empresa con filtros opcionales."""
+    query = _filtrar_por_empresa(db.query(Presupuestos), empresa_id)
 
     if estado and estado != 'Todos':
         query = query.filter(Presupuestos.estado == estado)
@@ -431,11 +458,13 @@ def listar_presupuestos(
 def actualizar_presupuesto(
     db: Session,
     presupuesto_id: int,
-    datos: ActualizarPresupuesto
+    datos: ActualizarPresupuesto,
+    empresa_id: Optional[int] = None
 ) -> dict:
-    """Actualiza un presupuesto. Lanza Exception si no existe."""
-    presupuesto = db.query(Presupuestos).filter(
-        Presupuestos.id == presupuesto_id).first()
+    """Actualiza un presupuesto de la empresa. Lanza Exception si no existe."""
+    presupuesto = _filtrar_por_empresa(
+        db.query(Presupuestos), empresa_id
+    ).filter(Presupuestos.id == presupuesto_id).first()
 
     if not presupuesto:
         raise Exception("Presupuesto no encontrado")
@@ -467,11 +496,13 @@ def actualizar_presupuesto(
     return {"id": presupuesto.id, "titulo": presupuesto.titulo, "actualizado": True}
 
 
-def eliminar_presupuesto(db: Session, presupuesto_id: int) -> dict:
-    """Elimina un presupuesto. Lanza Exception si no existe."""
-    presupuesto = db.query(Presupuestos).filter(
-        Presupuestos.id == presupuesto_id
-    ).first()
+def eliminar_presupuesto(
+    db: Session, presupuesto_id: int, empresa_id: Optional[int] = None
+) -> dict:
+    """Elimina un presupuesto de la empresa. Lanza Exception si no existe."""
+    presupuesto = _filtrar_por_empresa(
+        db.query(Presupuestos), empresa_id
+    ).filter(Presupuestos.id == presupuesto_id).first()
 
     if not presupuesto:
         raise Exception("Presupuesto no encontrado")

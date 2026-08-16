@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 from sqlalchemy.orm import Session
 from groq import Groq
 
@@ -26,6 +27,7 @@ class PresupuestoRAGService:
         modalidad_trabajo: str = "OBRA COMPLETA",
         materiales_por_cliente: bool = False,
         max_contexto: int = 3,
+        empresa_id: Optional[int] = None,
     ) -> dict:
         print(f"\n🚀 Generando presupuesto con RAG para: '{descripcion}'")
         print(f"📋 Modalidad: {modalidad_trabajo}")
@@ -41,7 +43,7 @@ class PresupuestoRAGService:
             if query_embedding:
                 distancia_col = PresupuestoEmbedding.embedding.l2_distance(query_embedding).label("distancia")
 
-                presupuestos_similares = (
+                contexto_query = (
                     self.db.query(
                         Presupuestos,
                         PresupuestoEmbedding.contenido_indexado,
@@ -51,6 +53,17 @@ class PresupuestoRAGService:
                         PresupuestoEmbedding,
                         Presupuestos.id == PresupuestoEmbedding.presupuesto_id
                     )
+                )
+
+                if empresa_id is None:
+                    contexto_query = contexto_query.filter(
+                        Presupuestos.empresa_id.is_(None))
+                else:
+                    contexto_query = contexto_query.filter(
+                        Presupuestos.empresa_id == empresa_id)
+
+                presupuestos_similares = (
+                    contexto_query
                     .order_by(distancia_col)
                     .limit(max_contexto)
                     .all()

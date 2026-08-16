@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -11,6 +9,7 @@ class LoginRequest(BaseModel):
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)
+    nombre_completo: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -19,25 +18,19 @@ class TokenResponse(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
- 
-    razon_social: Optional[str] = Field(default=None, max_length=255)
-    direccion_fiscal: Optional[str] = Field(default=None, max_length=255)
-    documento: Optional[str] = Field(default=None, max_length=20)
-    telefono: Optional[str] = Field(default=None, max_length=20)
-    web: Optional[str] = Field(default=None, max_length=255)
-
+    nombre_completo: str | None = Field(default=None, max_length=255)
+    cargo: str | None = Field(default=None, max_length=255)
+    telefono: str | None = Field(default=None, max_length=20)
     model_config = {"extra": "forbid"}
 
 
 class UserResponse(BaseModel):
-
     id: int
     email: EmailStr
-    razon_social: Optional[str] = None
-    direccion_fiscal: Optional[str] = None
-    documento: Optional[str] = None
-    telefono: Optional[str] = None
-    web: Optional[str] = None
+    nombre_completo: str | None = None
+    cargo: str | None = None
+    rol: str | None = None
+    telefono: str | None = None
+    empresa_id: int | None = None
     is_active: bool
-
     model_config = {"from_attributes": True}

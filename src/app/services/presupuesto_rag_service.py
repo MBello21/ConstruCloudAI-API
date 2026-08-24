@@ -1,8 +1,9 @@
 import json
 import os
+import re
 from typing import Optional
 from sqlalchemy.orm import Session
-from groq import Groq
+from openai import OpenAI
 
 from ..models.presupuestos import Presupuestos
 from ..models.presupuesto_embedding import PresupuestoEmbedding
@@ -15,10 +16,21 @@ class PresupuestoRAGService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.client = OpenAI(
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            api_key=os.getenv("GOOGLE_API_KEY"),
+        )
+        self.model = "gemini-3.6-flash"
         self.embedding_service = EmbeddingService()
-        # Modelo activo y de excelente rendimiento en Groq
-        self.groq_model = "llama-3.3-70b-versatile"
+
+    def _limpiar_json(self, texto: str) -> dict:
+        """Limpia y parsea JSON que puede tener trailing commas o formato irregular."""
+        # Quitar bloques de código markdown si los hay
+        texto = re.sub(r'^```json\s*', '', texto.strip())
+        texto = re.sub(r'\s*```$', '', texto.strip())
+        # Quitar trailing commas antes de } o ]
+        texto = re.sub(r',\s*([}\]])', r'\1', texto)
+        return json.loads(texto)
 
     def generar_presupuesto_con_rag(
         self,
@@ -33,7 +45,6 @@ class PresupuestoRAGService:
         print(f"📋 Modalidad: {modalidad_trabajo}")
         print(f"🔧 Materiales por cliente: {materiales_por_cliente}")
 
-        # 1. RETRIEVE: Buscar presupuestos similares vía pgvector
         presupuestos_similares = []
         try:
             query_embedding = self.embedding_service.generar_embedding(
@@ -41,7 +52,8 @@ class PresupuestoRAGService:
             )
 
             if query_embedding:
-                distancia_col = PresupuestoEmbedding.embedding.l2_distance(query_embedding).label("distancia")
+                distancia_col = PresupuestoEmbedding.embedding.l2_distance(
+                    query_embedding).label("distancia")
 
                 contexto_query = (
                     self.db.query(
@@ -76,7 +88,6 @@ class PresupuestoRAGService:
             print(f"⚠️ Error en búsqueda vectorial: {e}")
             presupuestos_similares = []
 
-        # 2. AUGMENT: Construir contexto para Groq
         contexto_texto = ""
         contexto_usado = []
         similitud_promedio = 0.0
@@ -89,7 +100,6 @@ class PresupuestoRAGService:
                 similitud = max(0.0, 1.0 - (distancia / 2.0))
                 similitudes.append(similitud)
 
-                # ✅ Corrección: c.titulo en lugar de c.nombre
                 capitulos_info = ""
                 if pres.capitulos:
                     capitulos_info = "\n  Capítulos: " + ", ".join(
@@ -113,7 +123,6 @@ class PresupuestoRAGService:
 
             similitud_promedio = sum(similitudes) / len(similitudes)
 
-        # 3. GENERATE: Forzamos la respuesta en formato JSON estructurado
         prompt = PROMPT_GENERAR_PRESUPUESTO.format(
             titulo=titulo,
             descripcion=descripcion,
@@ -121,20 +130,27 @@ class PresupuestoRAGService:
             contexto_texto=contexto_texto
         )
 
-        print("📝 Llamando a Groq para generar estructura JSON...")
+        print("📝 Llamando a LLM para generar estructura JSON...")
 
-        response = self.groq_client.chat.completions.create(
-            model=self.groq_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=4000,
-            response_format={"type": "json_object"},  # 👈 Garantiza respuesta en JSON
-        )
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=16000,
+            )
 
-        contenido_json = response.choices[0].message.content
-        datos_presupuesto = json.loads(contenido_json)
+            contenido_json = response.choices[0].message.content
+            datos_presupuesto = self._limpiar_json(contenido_json)
+        except json.JSONDecodeError as e:
+            print(f"❌ Error parseando JSON: {e}")
+            print(f"📥 Respuesta raw: {contenido_json[:500]}")
+            raise ValueError(f"La IA devolvió JSON inválido: {e}")
+        except Exception as e:
+            print(f"❌ Error en llamada LLM: {e}")
+            raise
 
-        print("✅ Estructura de presupuesto generada correctamente por Groq")
+        print("✅ Estructura de presupuesto generada correctamente")
 
         return {
             "presupuesto_estructurado": datos_presupuesto,
@@ -163,21 +179,26 @@ class PresupuestoRAGService:
             f"Mejorando presupuesto {presupuesto_id} con feedback: {feedback}"
         )
 
-        prompt = PROMPT_GENERAR_PRESUPUESTO.format(
+        prompt = PROMPT_MEJORAR_PRESUPUESTO.format(
             titulo=presupuesto.titulo,
             descripcion=presupuesto.descripcion,
-            contexto_texto=presupuesto.contexto_texto
-        )
-        response = self.groq_client.chat.completions.create(
-            model=self.groq_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.0,
-            max_tokens=2500,
+            contexto_texto=presupuesto.contexto_rag
         )
 
-        presupuesto_mejorado = response.choices[0].message.content
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=16000,
+            )
+
+            presupuesto_mejorado = response.choices[0].message.content
+        except Exception as e:
+            print(f"❌ Error en llamada LLM: {e}")
+            raise
+
         presupuesto.contexto_rag = presupuesto_mejorado
-
         self.db.commit()
 
         return {

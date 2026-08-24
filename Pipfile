@@ -27,6 +27,7 @@ requests = "*"
 python-dateutil = "*"
 dotenv = "*"
 pyjwt = "*"
+openai = "*"
 
 [dev-packages]
 

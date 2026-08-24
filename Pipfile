@@ -19,9 +19,15 @@ python-jose = {extras = ["cryptography"], version = "*"}
 passlib = {extras = ["bcrypt"], version = "*"}
 pydantic = "*"
 email-validator = "*"
-dotenv = "*"
 bcrypt = "==4.0.1"
 alembic = "*"
+groq = "*"
+pgvector = "*"
+requests = "*"
+python-dateutil = "*"
+dotenv = "*"
+pyjwt = "*"
+openai = "*"
 
 [dev-packages]
 

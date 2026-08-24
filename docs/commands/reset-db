@@ -1,0 +1,5 @@
+pipenv run alembic stamp base
+pipenv run alembic downgrade base
+psql -h db -U ConstruCloud -d ConstruCloudAI -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+
